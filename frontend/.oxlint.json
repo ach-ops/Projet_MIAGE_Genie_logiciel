@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "import"],
+  "env": {
+    "browser": true,
+    "es2024": true,
+    "node": true
+  },
+  "globals": {
+    "defineProps": "readonly",
+    "defineEmits": "readonly",
+    "defineExpose": "readonly",
+    "withDefaults": "readonly"
+  },
+  "rules": {
+    "no-undef": "error",
+    "no-explicit-any": "error",
+    "no-unused-vars": "error",
+    "no-debugger": "error",
+    "prefer-const": "error",
+    "eqeqeq": "error",
+    "no-var": "error"
+  },
+  "ignorePatterns": ["node_modules", "dist", ".git", "*.min.js", "*.d.ts", "src/font/**"],
+  "overrides": [
+    {
+      "files": ["src/"],
+      "rules": {
+        "no-unused-vars": "warn"
+      }
+    }
+  ]
+}

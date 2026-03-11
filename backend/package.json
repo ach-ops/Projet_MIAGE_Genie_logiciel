@@ -4,16 +4,22 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-     "dev": "nodemon index.js",
-    "start": "node index.js"
+    "dev": "cross-env nodemon index.js",
+    "start": "cross-env node index.js",
+    "lint": "oxlint",
+    "lint:fix": "oxlint . --fix",
+    "prepare": "husky"
   },
   "license": "ISC",
   "description": "",
   "dependencies": {
     "axios": "^1.13.6",
+    "cross-env": "^10.1.0",
     "express": "^5.2.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "husky": "^9.1.7",
+    "nodemon": "^3.1.14",
+    "oxlint": "^1.53.0"
   }
 }
