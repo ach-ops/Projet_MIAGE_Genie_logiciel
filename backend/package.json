@@ -7,7 +7,8 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "lint": "oxlint",
-    "lint:fix": "oxlint . --fix"
+    "lint:fix": "oxlint . --fix",
+    "prepare": "husky"
   },
   "license": "ISC",
   "description": "",
@@ -16,6 +17,7 @@
     "express": "^5.2.1"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
     "nodemon": "^3.1.14",
     "oxlint": "^1.53.0"
   }
