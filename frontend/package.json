@@ -8,17 +8,22 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "oxlint --config oxlint.json .",
-    "lint:fix": "oxlint --config oxlint.json . --fix"
+    "lint:fix": "oxlint --config oxlint.json . --fix",
+    "prepare": "husky",
+    "format": "prettier --write src/"
   },
   "dependencies": {
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "vue": "^3.5.25"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",
     "@vitejs/plugin-vue": "^6.0.2",
     "autoprefixer": "^10.4.27",
+    "husky": "^9.1.7",
     "oxlint": "^1.53.0",
     "postcss": "^8.5.8",
+    "prettier": "3.8.1",
     "tailwindcss": "^4.2.1",
     "vite": "^7.3.1"
   }
