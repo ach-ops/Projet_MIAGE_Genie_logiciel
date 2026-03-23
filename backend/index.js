@@ -4,9 +4,14 @@ import swaggerJsdoc from "swagger-jsdoc";
 import transportRoutes from "./controllers/transport.controllers.js";
 import travauxController from "./controllers/travaux.controllers.js"
 import { loadGTFS } from "./services/gtfs.service.js";
+import { connectDB } from "./services/mongo.service.js";
+import { startCron } from "./cronjobs/delay.cron.js";
 
 
+// Lancement de la connexion à MongoDB avant de démarrer le serveur
+await connectDB()
 await loadGTFS();
+startCron();
 
 const app = express();
 

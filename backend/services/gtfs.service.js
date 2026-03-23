@@ -305,3 +305,62 @@ export function getDirections(stopId, routeId) {
     label,
   }));
 }
+
+
+export function getRouteInfo(routeId) {
+  const route = routes.get(routeId)
+
+  if (!route) return null
+
+  return {
+    routeId: route.route_id,
+    routeName: route.route_short_name || route.route_long_name,
+    color: route.route_color ? `#${route.route_color}` : "#666666",
+    textColor: route.route_text_color
+      ? `#${route.route_text_color}`
+      : "#ffffff"
+  }
+}
+
+export function getAllTerminals() {
+  const terminals = []
+  const seen = new Set()
+
+  for (const [tripId, trip] of trips.entries()) {
+
+    const routeId = trip.route_id
+    const directionId = trip.direction_id
+
+    // éviter doublons
+    const key = `${routeId}-${directionId}`
+    if (seen.has(key)) continue
+    seen.add(key)
+
+    // récupérer tous les stop_times de ce trajet
+    const stopTimes = []
+
+    for (const [stopId, sts] of stopTimesByStop.entries()) {
+      for (const st of sts) {
+        if (st.trip_id === tripId) {
+          stopTimes.push(st)
+        }
+      }
+    }
+
+    if (stopTimes.length === 0) continue
+
+    // trouver le dernier arrêt
+    const lastStop = stopTimes.reduce((max, st) => {
+      return Number(st.stop_sequence) > Number(max.stop_sequence) ? st : max
+    })
+
+    terminals.push({
+      stopId: lastStop.stop_id,
+      routeId,
+      directionId,
+      name: getStopName(lastStop.stop_id)
+    })
+  }
+
+  return terminals
+}

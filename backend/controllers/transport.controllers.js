@@ -6,11 +6,13 @@
  */
 import { Router } from "express";
 import {
-    listStops,
-    listRoutes,
-    listDirections,
-    listArrivals,
-    listAllArrivals
+  listStops,
+  listRoutes,
+  listDirections,
+  listArrivals,
+  listAllArrivals,
+  listAllRoutes,
+  listDirectionsForRoute,
 } from "../services/transport.service.js";
 
 const router = Router();
@@ -156,7 +158,7 @@ router.get("/stops/:stopId/routes/:routeId/directions/:directionId/all-arrivals"
  *       200:
  *         description: Liste de points [lat, lon]
  */
-router.get("/routes/:routeId/directions/:directionId/shape", listShape);
+// router.get("/routes/:routeId/directions/:directionId/shape", listShape); // en cours de développement, shape pas encore traité dans le service
 
 /**
  * @swagger
