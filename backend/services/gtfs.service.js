@@ -4,9 +4,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { Transform } from "stream";
 
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const stops = new Map();
-const routes = new Map();
+const routes = new Map();   
 const trips = new Map();
 const stopTimesByStop = new Map();
 const calendar = new Map();
