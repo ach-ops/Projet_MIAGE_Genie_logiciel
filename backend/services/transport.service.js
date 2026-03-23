@@ -1,4 +1,4 @@
-import { getAllStops, getAllRoutes, getRoutesByStop, getDirections, getDirectionsForRoute, getRouteShape } from "./gtfs.service.js";
+import { getAllStops, getRoutesByStop, getDirections } from "./gtfs.service.js";
 import { getRealtimeArrivals } from "./realtime.service.js";
 import { getStopName } from "./gtfs.service.js";
 
