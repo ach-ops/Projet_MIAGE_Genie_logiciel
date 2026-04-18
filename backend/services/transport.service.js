@@ -1,6 +1,5 @@
-import { getAllStops, getRoutesByStop, getDirections } from "./gtfs.service.js";
+import { getAllStops, getRoutesByStop, getDirections, getStopName, getAllRoutes, getDirectionsForRoute } from "./gtfs.service.js";
 import { getRealtimeArrivals } from "./realtime.service.js";
-import { getStopName } from "./gtfs.service.js";
 
 async function listAllArrivals(req, res) {
   const { stopId, routeId, directionId } = req.params;
@@ -17,7 +16,7 @@ async function listAllArrivals(req, res) {
       realtime,
       theoretical
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Erreur lors de la récupération des arrivées" });
   }
 }
@@ -47,7 +46,7 @@ async function listArrivals(req, res) {
     );
 
     const directions = getDirections(stopId, routeId);
-    const direction = directions.find(d => d.directionId == directionId);
+    const direction = directions.find(d => d.directionId === directionId);
     const directionLabel = direction ? direction.label : null;
 
     const stopName = getStopName(stopId);
@@ -57,15 +56,9 @@ async function listArrivals(req, res) {
       direction: directionLabel,
       arrivals
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Erreur temps réel" });
   }
-}
-
-function listShape(req, res) {
-  const { routeId, directionId } = req.params;
-  const points = getRouteShape(routeId, directionId);
-  res.json({ points });
 }
 
 function listAllRoutes(req, res) {
@@ -83,7 +76,6 @@ export {
   listDirections,
   listArrivals,
   listAllArrivals,
-  listShape,
   listAllRoutes,
   listDirectionsForRoute
 };

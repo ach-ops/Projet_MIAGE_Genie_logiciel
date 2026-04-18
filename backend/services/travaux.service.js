@@ -12,9 +12,7 @@ export async function listIncidents(req, res) {
 
         res.json(data)
 
-    } catch (error) {
-
-        console.error("Erreur récupération trafic", error)
+    } catch {
 
         res.status(500).json({
             error: "Erreur récupération trafic"

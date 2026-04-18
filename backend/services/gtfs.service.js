@@ -180,7 +180,6 @@ function removeBOM() {
 }
 
 export async function loadGTFS() {
-  console.log("Chargement GTFS...");
 
   await loadStops();
   await loadRoutes();
@@ -189,7 +188,6 @@ export async function loadGTFS() {
   await loadCalendar();
   await loadCalendarDates();
 
-  console.log("API GTFS chargé avec succès");
 }
 
 function loadStops() {
@@ -322,6 +320,23 @@ export function getRouteInfo(routeId) {
   }
 }
 
+export function getAllRoutes() {
+  return Array.from(routes.values());
+}
+
+export function getDirectionsForRoute(routeId) {
+  const seen = new Set();
+  const directions = [];
+  for (const trip of trips.values()) {
+    if (trip.route_id !== routeId) continue;
+    const key = trip.direction_id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    directions.push({ direction_id: trip.direction_id, headsign: trip.trip_headsign });
+  }
+  return directions;
+}
+
 export function getAllTerminals() {
   const terminals = []
   const seen = new Set()
@@ -339,7 +354,7 @@ export function getAllTerminals() {
     // récupérer tous les stop_times de ce trajet
     const stopTimes = []
 
-    for (const [stopId, sts] of stopTimesByStop.entries()) {
+    for (const sts of stopTimesByStop.values()) {
       for (const st of sts) {
         if (st.trip_id === tripId) {
           stopTimes.push(st)
