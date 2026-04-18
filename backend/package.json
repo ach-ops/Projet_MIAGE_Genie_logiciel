@@ -8,6 +8,8 @@
     "start": "cross-env node index.js",
     "lint": "oxlint",
     "lint:fix": "oxlint . --fix",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "prepare": "husky"
   },
   "license": "ISC",
@@ -18,13 +20,14 @@
     "csv-parser": "^3.2.0",
     "express": "^5.2.1",
     "gtfs-realtime-bindings": "^1.1.1",
-    "swagger": "^0.7.5",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.4",
     "husky": "^9.1.7",
     "nodemon": "^3.1.14",
-    "oxlint": "^1.53.0"
+    "oxlint": "^1.53.0",
+    "vitest": "^4.1.4"
   }
 }

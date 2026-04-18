@@ -10,7 +10,6 @@ export async function connectDB() {
   await client.connect()
   db = client.db("transport")
   collection = db.collection("delays")
-  console.log("MongoDB connecté")
 }
 
 export async function saveDelay(data) {

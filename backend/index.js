@@ -35,6 +35,4 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api", transportRoutes);
 app.use("/api/travaux", travauxController);
 
-app.listen(3000, "0.0.0.0", () => {
-    console.log("API STAN Lancé sur le port 3000 (accessible sur le réseau local)");
-});
+app.listen(3000, "0.0.0.0");
