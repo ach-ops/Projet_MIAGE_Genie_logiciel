@@ -2,11 +2,14 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    globals: true,
     environment: 'node',
+    isolate: true,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
-      exclude: ['node_modules/', 'data/'],
+      reporter: ['text', 'html', 'lcov'],
+      exclude: ['node_modules/', 'tests/', 'data/'],
+      thresholds: { lines: 80, functions: 80 },
     },
   },
 });
