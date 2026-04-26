@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     isolate: true,
+    env: { TZ: 'Europe/Paris' },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
