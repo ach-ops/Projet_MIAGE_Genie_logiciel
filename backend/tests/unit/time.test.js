@@ -3,6 +3,7 @@ import {
   formatDateYYYYMMDD,
   getWeekdayColumn,
   gtfsTimeToTimestamp,
+  formatTimestampToLocalTime,
   longToNumber,
 } from '../../utils/time.js';
 
@@ -94,6 +95,21 @@ describe(`gtfsTimeToTimestamp`, () => {
     const ts3 = gtfsTimeToTimestamp('24:00:00', REF);
     expect(ts1).toBeLessThan(ts2);
     expect(ts2).toBeLessThan(ts3);
+  });
+});
+
+// ─── formatTimestampToLocalTime ───────────────────────────────────────────────
+
+describe(`formatTimestampToLocalTime`, () => {
+  it(`retourne null pour un timestamp non fini`, () => {
+    expect(formatTimestampToLocalTime(Number.NaN)).toBeNull();
+    expect(formatTimestampToLocalTime(Infinity)).toBeNull();
+  });
+
+  it(`formate un timestamp valide en HH:MM`, () => {
+    const ts = new Date(2026, 3, 6, 14, 30, 0).getTime();
+    const result = formatTimestampToLocalTime(ts);
+    expect(result).toMatch(/^\d{2}:\d{2}$/);
   });
 });
 
