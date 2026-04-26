@@ -15,7 +15,7 @@
  * - appelle next(err) si le handler rejette
  * - ne double-wrap pas les erreurs
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('../../utils/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() },

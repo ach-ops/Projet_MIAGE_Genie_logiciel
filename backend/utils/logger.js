@@ -9,8 +9,9 @@ function format(level, message, meta) {
 }
 
 export const logger = {
-  debug: (msg, meta) => { if (currentLevel <= levels.debug) console.debug(format('debug', msg, meta)); },
-  info:  (msg, meta) => { if (currentLevel <= levels.info)  console.info(format('info',  msg, meta)); },
-  warn:  (msg, meta) => { if (currentLevel <= levels.warn)  console.warn(format('warn',  msg, meta)); },
-  error: (msg, meta) => { if (currentLevel <= levels.error) console.error(format('error', msg, meta)); },
+  // eslint-disable-next-line no-console
+  debug: (msg, meta) => { if (currentLevel <= levels.debug) console.debug(format('debug', msg, meta)); }, // oxlint-disable-line no-console
+  info:  (msg, meta) => { if (currentLevel <= levels.info)  console.info(format('info',  msg, meta)); },  // oxlint-disable-line no-console
+  warn:  (msg, meta) => { if (currentLevel <= levels.warn)  console.warn(format('warn',  msg, meta)); },  // oxlint-disable-line no-console
+  error: (msg, meta) => { if (currentLevel <= levels.error) console.error(format('error', msg, meta)); }, // oxlint-disable-line no-console
 };
