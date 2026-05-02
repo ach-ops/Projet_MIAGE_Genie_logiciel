@@ -8,13 +8,13 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-let scheduledExpression = null;
+let _scheduledExpression = null;
 let scheduledCallback = null;
 
 vi.mock('node-cron', () => ({
   default: {
     schedule: vi.fn((expression, callback) => {
-      scheduledExpression = expression;
+      _scheduledExpression = expression;
       scheduledCallback = callback;
     }),
   },
@@ -36,7 +36,7 @@ import { startCron } from '../../cronjobs/delay.cron.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  scheduledExpression = null;
+  _scheduledExpression = null;
   scheduledCallback = null;
 });
 
