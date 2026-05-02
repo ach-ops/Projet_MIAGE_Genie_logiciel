@@ -9,6 +9,7 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import { config } from './config/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
+import transportRoutes from './routes/transport.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -42,6 +43,9 @@ export function createApp() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() })
   );
 
+    // ─── Routes ─────────────────────────────────────────────────────────────────
+
+  app.use('/api', transportRoutes);
   app.use(errorHandler);
 
   return app;
