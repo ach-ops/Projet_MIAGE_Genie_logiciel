@@ -1,7 +1,0 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
-# Format avec Prettier
-npm run format
-# Lint avec oxlint
-npm run lint
