@@ -1,0 +1,6 @@
+trip_id,route_id,service_id,direction_id,trip_headsign,shape_id
+TRIP_1A,ROUTE_1,SERVICE_ALL,0,Terminus Nord,SHAPE_1
+TRIP_1B,ROUTE_1,SERVICE_ALL,0,Terminus Nord,
+TRIP_1C,ROUTE_1,SERVICE_ALL,1,Terminus Sud,
+TRIP_2A,ROUTE_2,SERVICE_ALL,0,Terminus Est,
+TRIP_INACTIVE,ROUTE_1,SERVICE_INACTIVE,0,Terminus Nord,
