@@ -52,7 +52,7 @@ beforeEach(() => {
 
 afterEach(() => {
   process.env.WEATHER_API_KEY = ORIGINAL_KEY;
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
