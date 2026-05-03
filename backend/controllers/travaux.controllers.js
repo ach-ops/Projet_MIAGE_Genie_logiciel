@@ -1,25 +1,12 @@
 /**
- * @swagger
- * tags:
- *   name: Travaux
- *   description: Informations travaux en temps réel
+ * Contrôleur Travaux / Incidents.
+ * Retourne les incidents trafic en temps réel sur l'agglomération de Nancy.
  */
+import { fetchIncidents } from '../services/travaux.service.js';
 
-import { Router } from "express"
-import { listIncidents } from "../services/travaux.service.js"
-
-const router = Router()
-
-/**
- * @swagger
- * /api/travaux/incidents:
- *   get:
- *     summary: Liste les incidents travaux
- *     tags: [Travaux]
- *     responses:
- *       200:
- *         description: Liste des incidents
- */
-router.get("/incidents", listIncidents)
-
-export default router
+// GET /api/travaux/incidents
+// Retourne les accidents, chantiers et routes barrées
+export async function listIncidents(_req, res) {
+  const data = await fetchIncidents();
+  res.json(data);
+}
