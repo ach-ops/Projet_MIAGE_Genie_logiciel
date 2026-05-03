@@ -10,6 +10,7 @@ import { config } from './config/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import transportRoutes from './routes/transport.routes.js';
+import weatherRoutes from './routes/weather.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -46,6 +47,7 @@ export function createApp() {
     // ─── Routes ─────────────────────────────────────────────────────────────────
 
   app.use('/api', transportRoutes);
+  app.use('/api/weather', weatherRoutes);
   app.use(errorHandler);
 
   return app;
