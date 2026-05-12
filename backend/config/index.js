@@ -24,10 +24,10 @@ export const config = {
 
   // Durée de mise en cache du feed GTFS-RT
   // Évite de re-télécharger le feed à chaque requête
-  realtimeCacheDuration: parseInt(process.env.CACHE_DURATION_MS, 10),
+  realtimeCacheDuration: parseInt(process.env.CACHE_DURATION_MS, 10) || 30000,
 
   // Nombre maximum de passages retournés par endpoint /arrivals
-  maxArrivals: parseInt(process.env.MAX_ARRIVALS, 10),
+  maxArrivals: parseInt(process.env.MAX_ARRIVALS, 10) || 8,
 
   // Timeout pour tous les appels HTTP externes (météo, GTFS-RT, velib...)
   axiosTimeoutMs: parseInt(process.env.AXIOS_TIMEOUT_MS, 10),
