@@ -33,7 +33,7 @@ export const config = {
   axiosTimeoutMs: parseInt(process.env.AXIOS_TIMEOUT_MS, 10),
 
   // Origines autorisées par le CORS (séparées par des virgules dans le .env)
-  corsOrigins: (process.env.CORS_ORIGINS)
+  corsOrigins: (process.env.CORS_ORIGINS || '')
     .split(',')
     .map(s => s.trim())
     .filter(Boolean),
