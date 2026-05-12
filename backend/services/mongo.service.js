@@ -22,12 +22,7 @@ import { logger } from '../utils/logger.js';
 // Nombre max de mesures conservées par terminus (≈ 5 h d'historique).
 const MAX_DELAY_ENTRIES = 288;
 
-const client = new MongoClient(config.mongoUri, {
-  serverSelectionTimeoutMS: 5_000, // délai max avant abandon si MongoDB ne répond pas
-  connectTimeoutMS:         5_000,
-  socketTimeoutMS:         10_000,
-});
-
+let client = null;
 let collection = null;
 
 /**
@@ -35,6 +30,11 @@ let collection = null;
  * Appelé une seule fois au démarrage du serveur.
  */
 export async function connectDB() {
+  client = new MongoClient(config.mongoUri, {
+    serverSelectionTimeoutMS: 5_000,
+    connectTimeoutMS:         5_000,
+    socketTimeoutMS:         10_000,
+  });
   await client.connect();
   const db = client.db(config.mongoDb);
   collection = db.collection('delays');
@@ -43,7 +43,7 @@ export async function connectDB() {
   await collection.createIndex({ routeId: 1, terminal: 1 }, { unique: true });
   await collection.createIndex({ routeId: 1 });
 
-  const safeUri = config.mongoUri.replace(/:([^@]+)@/, ':****@');
+  const safeUri = (config.mongoUri ?? '').replace(/:([^@]+)@/, ':****@');
   logger.info(`MongoDB connecté → ${safeUri} / ${config.mongoDb}`);
 }
 
