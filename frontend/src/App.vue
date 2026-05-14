@@ -178,10 +178,7 @@ onMounted(() => {
               class="route-badge"
               :style="badgeStyle(route)"
               :class="{ 'route-badge--active': selectedRouteId === route.route_id }"
-              @click="
-                selectedRouteId = route.route_id
-                onRouteChange()
-              "
+              @click="selectedRouteId = route.route_id; onRouteChange()"
             >
               {{ route.route_short_name }}
             </button>
@@ -198,10 +195,7 @@ onMounted(() => {
                 :key="dir.directionId"
                 class="list-btn"
                 :class="{ 'list-btn--active': selectedDirectionId === String(dir.directionId) }"
-                @click="
-                  selectedDirectionId = String(dir.directionId)
-                  onDirectionChange()
-                "
+                @click="selectedDirectionId = String(dir.directionId); onDirectionChange()"
               >
                 {{ dir.label }}
               </button>
@@ -219,10 +213,7 @@ onMounted(() => {
                 :key="stop.stop_id"
                 class="list-btn list-btn--sm"
                 :class="{ 'list-btn--active': selectedStopName === stop.stop_name }"
-                @click="
-                  selectedStopName = stop.stop_name
-                  fetchArrivals()
-                "
+                @click="selectedStopName = stop.stop_name; fetchArrivals()"
               >
                 {{ stop.stop_name }}
               </button>

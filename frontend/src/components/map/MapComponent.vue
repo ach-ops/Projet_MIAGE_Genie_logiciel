@@ -34,7 +34,7 @@ const velibMarkers = ref<google.maps.Marker[]>([])
 const velibVisible = ref(true)
 const velibLoading = ref(false)
 const velibCount = ref(0)
-let velibRefreshTimer: number | null = null
+let velibRefreshTimer: ReturnType<typeof setInterval> | null = null
 
 type VelibStation = {
   stationId: string
