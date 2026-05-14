@@ -53,8 +53,16 @@ const DARK_STYLES: google.maps.MapTypeStyle[] = [
   { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
   { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#757575' }] },
-  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
-  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#bdbdbd' }] },
+  {
+    featureType: 'administrative.country',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#9e9e9e' }]
+  },
+  {
+    featureType: 'administrative.locality',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#bdbdbd' }]
+  },
   { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
   { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#181818' }] },
   { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
@@ -63,11 +71,15 @@ const DARK_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#8a8a8a' }] },
   { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#373737' }] },
   { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3c3c3c' }] },
-  { featureType: 'road.highway.controlled_access', elementType: 'geometry', stylers: [{ color: '#4e4e4e' }] },
+  {
+    featureType: 'road.highway.controlled_access',
+    elementType: 'geometry',
+    stylers: [{ color: '#4e4e4e' }]
+  },
   { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
   { featureType: 'transit', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
   { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#000000' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3d3d3d' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3d3d3d' }] }
 ]
 
 // ── InfoWindow active ──────────────────────────────────────────────────────
@@ -86,7 +98,7 @@ function markerIcon(url: string, size = 32): google.maps.Icon {
   return {
     url,
     scaledSize: new google.maps.Size(size, size),
-    anchor: new google.maps.Point(size / 2, size),
+    anchor: new google.maps.Point(size / 2, size)
   }
 }
 
@@ -133,8 +145,8 @@ async function loadVelibStations() {
         icon: {
           url: velibIconImage,
           scaledSize: new google.maps.Size(35, 35),
-          anchor: new google.maps.Point(17, 17),
-        },
+          anchor: new google.maps.Point(17, 17)
+        }
       })
 
       const content = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;width:210px;padding:0;overflow:hidden;">
@@ -208,7 +220,7 @@ async function loadTravaux() {
     const marker = new google.maps.Marker({
       position: { lat, lng },
       map: map.value!,
-      icon: markerIcon(getTravauxIconUrl(incident.short_description)),
+      icon: markerIcon(getTravauxIconUrl(incident.short_description))
     })
 
     const content = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0;min-width:200px;">
@@ -240,7 +252,7 @@ function showStopOnMap(stopName: string) {
   stopMarker.value = new google.maps.Marker({
     position: { lat, lng },
     map: map.value,
-    icon: markerIcon(icons.busIcon),
+    icon: markerIcon(icons.busIcon)
   })
 
   const content = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0;min-width:160px;">
@@ -266,7 +278,7 @@ watch(
       stopMarker.value?.setMap(null)
       stopMarker.value = null
     }
-  },
+  }
 )
 
 // ── Tracé de ligne ─────────────────────────────────────────────────────────
@@ -280,7 +292,7 @@ function clearRouteLayers() {
 
 async function fetchShapePoints(routeId: string, directionId: string | number) {
   const res = await fetch(
-    `${API_BASE}/api/routes/${encodeURIComponent(routeId)}/directions/${encodeURIComponent(String(directionId))}/shape`,
+    `${API_BASE}/api/routes/${encodeURIComponent(routeId)}/directions/${encodeURIComponent(String(directionId))}/shape`
   )
   const data = await res.json()
   return (data.points || []) as [number, number][]
@@ -300,8 +312,8 @@ watch(
         const [shapePoints, stopsData] = await Promise.all([
           fetchShapePoints(routeId as string, dId),
           fetch(
-            `${API_BASE}/api/routes/${encodeURIComponent(routeId as string)}/directions/${encodeURIComponent(String(dId))}/stops`,
-          ).then((r) => r.json()),
+            `${API_BASE}/api/routes/${encodeURIComponent(routeId as string)}/directions/${encodeURIComponent(String(dId))}/stops`
+          ).then((r) => r.json())
         ])
 
         const stops: { lat: number; lon: number; stopName: string }[] = stopsData.stops || []
@@ -317,7 +329,7 @@ watch(
             strokeColor: lineColor,
             strokeWeight: 5,
             strokeOpacity: idx === 0 ? 0.85 : 0.55,
-            map: map.value!,
+            map: map.value!
           })
           routePolylines.value.push(polyline)
         }
@@ -334,8 +346,8 @@ watch(
                 fillColor: '#ffffff',
                 fillOpacity: 1,
                 strokeColor: lineColor,
-                strokeWeight: 3,
-              },
+                strokeWeight: 3
+              }
             })
 
             const content = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0;min-width:160px;">
@@ -357,18 +369,18 @@ watch(
         await drawDirection(directionId as string, 0, true)
       } else {
         const directionsRes = await fetch(
-          `${API_BASE}/api/routes/${encodeURIComponent(routeId as string)}/directions`,
+          `${API_BASE}/api/routes/${encodeURIComponent(routeId as string)}/directions`
         )
         const directionsData: { directionId: number | string }[] = await directionsRes.json()
-        await Promise.all((directionsData || []).map((d, idx) => drawDirection(d.directionId, idx, false)))
+        await Promise.all(
+          (directionsData || []).map((d, idx) => drawDirection(d.directionId, idx, false))
+        )
       }
 
       // Ajuster la vue sur la ligne tracée
       if (routePolylines.value.length > 0 || routeStopMarkers.value.length > 0) {
         const bounds = new google.maps.LatLngBounds()
-        routePolylines.value.forEach((p) =>
-          p.getPath().forEach((pt) => bounds.extend(pt)),
-        )
+        routePolylines.value.forEach((p) => p.getPath().forEach((pt) => bounds.extend(pt)))
         routeStopMarkers.value.forEach((m) => {
           const pos = m.getPosition()
           if (pos) bounds.extend(pos)
@@ -378,7 +390,7 @@ watch(
     } catch {
       // Shape non disponible — silencieux
     }
-  },
+  }
 )
 
 // ── Changement de thème ────────────────────────────────────────────────────
@@ -394,14 +406,14 @@ watch(theme, (t) => {
 onMounted(async () => {
   setOptions({
     key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
-    v: 'weekly',
+    v: 'weekly'
   })
 
   // Charge les trois bibliothèques nécessaires en parallèle
   await Promise.all([
-    importLibrary('maps'),    // Map, InfoWindow, Polyline, SymbolPath
-    importLibrary('core'),    // LatLngBounds, Size, Point
-    importLibrary('marker'),  // Marker (legacy)
+    importLibrary('maps'), // Map, InfoWindow, Polyline, SymbolPath
+    importLibrary('core'), // LatLngBounds, Size, Point
+    importLibrary('marker') // Marker (legacy)
   ])
 
   if (!mapContainer.value) return
@@ -412,7 +424,7 @@ onMounted(async () => {
     styles: theme.value === 'dark' ? DARK_STYLES : [],
     mapTypeControl: false,
     streetViewControl: false,
-    fullscreenControl: false,
+    fullscreenControl: false
   })
 
   void loadTravaux()

@@ -5,7 +5,7 @@ import { mount } from '@vue/test-utils'
 import App from '../App.vue'
 
 vi.mock('../composables/useTheme', () => ({
-  useTheme: () => ({ theme: ref('light'), toggle: vi.fn() }),
+  useTheme: () => ({ theme: ref('light'), toggle: vi.fn() })
 }))
 
 describe('App', () => {
@@ -16,10 +16,10 @@ describe('App', () => {
         {
           path: '/',
           component: {
-            template: '<div>You did it!</div>',
-          },
-        },
-      ],
+            template: '<div>You did it!</div>'
+          }
+        }
+      ]
     })
 
     await router.push('/')
@@ -27,8 +27,8 @@ describe('App', () => {
 
     const wrapper = mount(App, {
       global: {
-        plugins: [router],
-      },
+        plugins: [router]
+      }
     })
 
     expect(wrapper.text()).toContain('You did it!')

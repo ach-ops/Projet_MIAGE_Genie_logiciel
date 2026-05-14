@@ -59,9 +59,21 @@ function formatTime(time: string): string {
 <template>
   <div
     class="rounded-xl sm:rounded-2xl px-3 sm:px-4 h-[62px] sm:h-[72px] flex items-center gap-0 overflow-hidden transition-colors duration-200"
-    :style="theme === 'dark'
-      ? { background: 'var(--dk-card)', border: '1px solid var(--dk-border-md)', backdropFilter: 'blur(16px)', boxShadow: 'var(--dk-shadow-md)' }
-      : { background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(255,255,255,0.70)', backdropFilter: 'blur(16px)', boxShadow: '0 4px 20px rgba(0,80,120,0.10), 0 1px 4px rgba(0,0,0,0.05)' }"
+    :style="
+      theme === 'dark'
+        ? {
+            background: 'var(--dk-card)',
+            border: '1px solid var(--dk-border-md)',
+            backdropFilter: 'blur(16px)',
+            boxShadow: 'var(--dk-shadow-md)'
+          }
+        : {
+            background: 'rgba(255,255,255,0.82)',
+            border: '1px solid rgba(255,255,255,0.70)',
+            backdropFilter: 'blur(16px)',
+            boxShadow: '0 4px 20px rgba(0,80,120,0.10), 0 1px 4px rgba(0,0,0,0.05)'
+          }
+    "
   >
     <template v-if="loading">
       <div class="flex items-center gap-3 w-full">
@@ -81,7 +93,9 @@ function formatTime(time: string): string {
     </template>
 
     <template v-else>
-      <div class="flex items-center gap-2 sm:gap-2.5 shrink-0 pr-3 sm:pr-4 mr-3 sm:mr-4 border-r border-slate-100 dark:border-white/8">
+      <div
+        class="flex items-center gap-2 sm:gap-2.5 shrink-0 pr-3 sm:pr-4 mr-3 sm:mr-4 border-r border-slate-100 dark:border-white/8"
+      >
         <img
           v-if="currentWeather?.condition.icon"
           :src="'https:' + currentWeather.condition.icon"
@@ -89,17 +103,25 @@ function formatTime(time: string): string {
           class="w-8 h-8 sm:w-9 sm:h-9 shrink-0"
         />
         <div>
-          <div class="text-[18px] sm:text-[22px] font-bold text-slate-800 dark:text-slate-100 leading-none tracking-tight">
+          <div
+            class="text-[18px] sm:text-[22px] font-bold text-slate-800 dark:text-slate-100 leading-none tracking-tight"
+          >
             {{ currentWeather?.temp_c }}°C
           </div>
-          <div class="text-[10px] sm:text-[11px] text-slate-400 dark:text-[#8b949e] leading-tight mt-0.5 max-w-[80px] sm:max-w-[96px] truncate">
+          <div
+            class="text-[10px] sm:text-[11px] text-slate-400 dark:text-[#8b949e] leading-tight mt-0.5 max-w-[80px] sm:max-w-[96px] truncate"
+          >
             {{ currentWeather?.condition.text }}
           </div>
         </div>
       </div>
 
-      <div class="shrink-0 pr-3 sm:pr-4 mr-3 sm:mr-4 border-r border-slate-100 dark:border-white/8 hidden sm:block">
-        <div class="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+      <div
+        class="shrink-0 pr-3 sm:pr-4 mr-3 sm:mr-4 border-r border-slate-100 dark:border-white/8 hidden sm:block"
+      >
+        <div
+          class="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+        >
           <MapPin class="w-2.5 h-2.5 text-[#00b7cc]" />
           Nancy
         </div>
@@ -124,7 +146,11 @@ function formatTime(time: string): string {
           <span class="text-[10px] font-medium text-slate-400 dark:text-[#8b949e] tabular-nums">
             {{ formatTime(hour.time) }}
           </span>
-          <img :src="'https:' + hour.condition.icon" :alt="hour.condition.text" class="w-5 h-5 sm:w-6 sm:h-6" />
+          <img
+            :src="'https:' + hour.condition.icon"
+            :alt="hour.condition.text"
+            class="w-5 h-5 sm:w-6 sm:h-6"
+          />
           <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300 tabular-nums">
             {{ hour.temp_c }}°
           </span>

@@ -64,7 +64,9 @@ async function onRouteChange() {
   const route = routes.value.find((r) => r.route_id === selectedRouteId.value)
   selectedRouteColor.value = route?.route_color ? `#${route.route_color}` : '#00b7cc'
 
-  const res = await fetch(`${API_BASE}/api/routes/${encodeURIComponent(selectedRouteId.value)}/directions`)
+  const res = await fetch(
+    `${API_BASE}/api/routes/${encodeURIComponent(selectedRouteId.value)}/directions`
+  )
   directions.value = (await res.json()) ?? []
 }
 
@@ -76,21 +78,25 @@ async function onDirectionChange() {
   if (!selectedRouteId.value || !selectedDirectionId.value) return
 
   const res = await fetch(
-    `${API_BASE}/api/routes/${encodeURIComponent(selectedRouteId.value)}/directions/${encodeURIComponent(selectedDirectionId.value)}/stops`,
+    `${API_BASE}/api/routes/${encodeURIComponent(selectedRouteId.value)}/directions/${encodeURIComponent(selectedDirectionId.value)}/stops`
   )
   const data = await res.json()
   const rawStops: {
-    stopId?: string; stop_id?: string
-    stopName?: string; stop_name?: string
-    lat?: number; stop_lat?: string
-    lon?: number; stop_lon?: string
+    stopId?: string
+    stop_id?: string
+    stopName?: string
+    stop_name?: string
+    lat?: number
+    stop_lat?: string
+    lon?: number
+    stop_lon?: string
   }[] = data.stops ?? data
 
   directionStops.value = rawStops.map((s) => ({
     stop_id: s.stopId ?? s.stop_id ?? '',
     stop_name: s.stopName ?? s.stop_name ?? '',
     stop_lat: String(s.lat ?? s.stop_lat ?? ''),
-    stop_lon: String(s.lon ?? s.stop_lon ?? ''),
+    stop_lon: String(s.lon ?? s.stop_lon ?? '')
   }))
 }
 
@@ -101,7 +107,9 @@ async function fetchArrivals() {
   if (!stop) return
 
   const route = routes.value.find((r) => r.route_id === selectedRouteId.value)
-  const direction = directions.value.find((d) => String(d.directionId) === selectedDirectionId.value)
+  const direction = directions.value.find(
+    (d) => String(d.directionId) === selectedDirectionId.value
+  )
 
   arrivalsStopName.value = selectedStopName.value
   arrivalsDirectionName.value = direction?.label ?? ''
@@ -113,8 +121,8 @@ async function fetchArrivals() {
   try {
     const res = await fetch(
       `${API_BASE}/api/stops/${encodeURIComponent(stop.stop_id)}/arrivals` +
-      `?routeId=${encodeURIComponent(selectedRouteId.value)}` +
-      `&directionId=${encodeURIComponent(selectedDirectionId.value)}`,
+        `?routeId=${encodeURIComponent(selectedRouteId.value)}` +
+        `&directionId=${encodeURIComponent(selectedDirectionId.value)}`
     )
     arrivals.value = (await res.json()) ?? []
   } catch {
@@ -132,7 +140,6 @@ onMounted(() => {
 
 <template>
   <div class="app-shell" :class="{ dark: theme === 'dark' }">
-
     <!-- ── En-tête ──────────────────────────────────────────────────────── -->
     <header class="app-header">
       <div class="header-brand">
@@ -159,10 +166,8 @@ onMounted(() => {
 
     <!-- ── Corps principal ────────────────────────────────────────────── -->
     <main class="app-main">
-
       <!-- Panneau gauche -->
       <aside class="app-sidebar no-scrollbar">
-
         <!-- Sélecteur de ligne -->
         <div class="panel">
           <p class="panel-label">Ligne</p>
@@ -173,7 +178,10 @@ onMounted(() => {
               class="route-badge"
               :style="badgeStyle(route)"
               :class="{ 'route-badge--active': selectedRouteId === route.route_id }"
-              @click="selectedRouteId = route.route_id; onRouteChange()"
+              @click="
+                selectedRouteId = route.route_id
+                onRouteChange()
+              "
             >
               {{ route.route_short_name }}
             </button>
@@ -190,7 +198,10 @@ onMounted(() => {
                 :key="dir.directionId"
                 class="list-btn"
                 :class="{ 'list-btn--active': selectedDirectionId === String(dir.directionId) }"
-                @click="selectedDirectionId = String(dir.directionId); onDirectionChange()"
+                @click="
+                  selectedDirectionId = String(dir.directionId)
+                  onDirectionChange()
+                "
               >
                 {{ dir.label }}
               </button>
@@ -208,7 +219,10 @@ onMounted(() => {
                 :key="stop.stop_id"
                 class="list-btn list-btn--sm"
                 :class="{ 'list-btn--active': selectedStopName === stop.stop_name }"
-                @click="selectedStopName = stop.stop_name; fetchArrivals()"
+                @click="
+                  selectedStopName = stop.stop_name
+                  fetchArrivals()
+                "
               >
                 {{ stop.stop_name }}
               </button>
@@ -229,7 +243,6 @@ onMounted(() => {
             @refresh="fetchArrivals"
           />
         </Transition>
-
       </aside>
 
       <!-- Carte -->
@@ -255,7 +268,9 @@ onMounted(() => {
   overflow: hidden;
   background: #e2eaf4;
   color: #0f172a;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
 .app-shell.dark {
   background: var(--dk-bg);
@@ -270,8 +285,8 @@ onMounted(() => {
   padding: 8px 16px;
   flex-shrink: 0;
   background: white;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  box-shadow: 0 1px 4px rgba(0,80,120,0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 4px rgba(0, 80, 120, 0.06);
 }
 .app-shell.dark .app-header {
   background: var(--dk-surface);
@@ -300,9 +315,16 @@ onMounted(() => {
   letter-spacing: -0.3px;
   display: none;
 }
-@media (min-width: 640px) { .brand-name { display: block; } }
+@media (min-width: 640px) {
+  .brand-name {
+    display: block;
+  }
+}
 
-.header-weather { flex: 1; min-width: 0; }
+.header-weather {
+  flex: 1;
+  min-width: 0;
+}
 
 .theme-toggle {
   width: 34px;
@@ -316,15 +338,21 @@ onMounted(() => {
   flex-shrink: 0;
   background: #f1f5f9;
   color: #64748b;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   padding: 0;
 }
-.theme-toggle:hover { background: #e2e8f0; }
+.theme-toggle:hover {
+  background: #e2e8f0;
+}
 .app-shell.dark .theme-toggle {
-  background: rgba(255,255,255,0.07);
+  background: rgba(255, 255, 255, 0.07);
   color: var(--dk-text-2);
 }
-.app-shell.dark .theme-toggle:hover { background: rgba(255,255,255,0.12); }
+.app-shell.dark .theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
 
 /* ── Ticker ─────────────────────────────────────────────────────────────── */
 .ticker-bar {
@@ -354,13 +382,13 @@ onMounted(() => {
 /* ── Panel card ─────────────────────────────────────────────────────────── */
 .panel {
   background: white;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 14px;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  box-shadow: 0 1px 4px rgba(0,80,120,0.05);
+  box-shadow: 0 1px 4px rgba(0, 80, 120, 0.05);
 }
 .app-shell.dark .panel {
   background: var(--dk-card);
@@ -376,7 +404,9 @@ onMounted(() => {
   letter-spacing: 0.08em;
   color: #94a3b8;
 }
-.app-shell.dark .panel-label { color: var(--dk-text-2); }
+.app-shell.dark .panel-label {
+  color: var(--dk-text-2);
+}
 
 /* ── Routes grid ────────────────────────────────────────────────────────── */
 .route-grid {
@@ -395,19 +425,31 @@ onMounted(() => {
   border: none;
   cursor: pointer;
   opacity: 0.82;
-  transition: opacity 0.12s, box-shadow 0.12s;
+  transition:
+    opacity 0.12s,
+    box-shadow 0.12s;
 }
-.route-badge:hover { opacity: 1; }
+.route-badge:hover {
+  opacity: 1;
+}
 .route-badge--active {
   opacity: 1;
-  box-shadow: 0 0 0 2px white, 0 0 0 4px #00b7cc;
+  box-shadow:
+    0 0 0 2px white,
+    0 0 0 4px #00b7cc;
 }
 .app-shell.dark .route-badge--active {
-  box-shadow: 0 0 0 2px var(--dk-card), 0 0 0 4px var(--dk-accent);
+  box-shadow:
+    0 0 0 2px var(--dk-card),
+    0 0 0 4px var(--dk-accent);
 }
 
 /* ── List buttons (direction / arrêt) ────────────────────────────────────── */
-.stack { display: flex; flex-direction: column; gap: 3px; }
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
 
 .stop-list {
   display: flex;
@@ -424,7 +466,9 @@ onMounted(() => {
   border-radius: 9px;
   border: none;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   background: #f8fafc;
   color: #475569;
   width: 100%;
@@ -432,9 +476,18 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.list-btn:hover { background: #f1f5f9; color: #0f172a; }
-.app-shell.dark .list-btn { background: rgba(255,255,255,0.04); color: var(--dk-text-2); }
-.app-shell.dark .list-btn:hover { background: rgba(255,255,255,0.08); color: var(--dk-text-1); }
+.list-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+.app-shell.dark .list-btn {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--dk-text-2);
+}
+.app-shell.dark .list-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--dk-text-1);
+}
 
 .list-btn--active {
   background: #00b7cc !important;
@@ -442,7 +495,10 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.list-btn--sm { font-size: 12px; padding: 5px 10px; }
+.list-btn--sm {
+  font-size: 12px;
+  padding: 5px 10px;
+}
 
 /* ── Map ─────────────────────────────────────────────────────────────────── */
 .map-wrapper {
@@ -450,7 +506,7 @@ onMounted(() => {
   min-width: 0;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,80,120,0.10);
+  box-shadow: 0 2px 12px rgba(0, 80, 120, 0.1);
 }
 .app-shell.dark .map-wrapper {
   box-shadow: var(--dk-shadow-md);

@@ -10,7 +10,7 @@ const items = [
   { label: 'Eau', icon: eau },
   { label: 'Chauffage', icon: chauffage },
   { label: 'Travaux', icon: travaux },
-  { label: 'Autre', icon: info },
+  { label: 'Autre', icon: info }
 ]
 </script>
 

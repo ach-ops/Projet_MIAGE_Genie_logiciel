@@ -20,20 +20,19 @@ async function fetchDelays() {
   try {
     const res = await fetch(`${API_BASE}/api/delays/by-route`)
     routeDelays.value = await res.json()
-  } catch {
-  }
+  } catch {}
 }
 
 function getMessages() {
   const list: { text: string; color?: { light: string; dark: string } }[] = [
-    { text: 'Bienvenue sur le site de STAN' },
+    { text: 'Bienvenue sur le site de STAN' }
   ]
   const tram = routeDelays.value.filter((r) => r.routeName.toUpperCase().startsWith('T'))
   const others = routeDelays.value.filter((r) => !r.routeName.toUpperCase().startsWith('T'))
   for (const r of [...tram, ...others]) {
     list.push({
       text: `Ligne ${r.routeName} : ${fmtDelay(r.averageDelayMin)}`,
-      color: delayColor(r.averageDelayMin),
+      color: delayColor(r.averageDelayMin)
     })
   }
   return list

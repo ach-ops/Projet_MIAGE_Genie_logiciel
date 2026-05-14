@@ -38,14 +38,14 @@ export type RouteInfo = {
   route_short_name: string
   route_long_name: string
   route_color?: string
-  route_text_color?: string  
+  route_text_color?: string
 }
 
 export type Direction = {
   directionId: number
   label: string
   stopId: string
-  routeId: string  
+  routeId: string
 }
 
 export type Arrival = {
@@ -72,7 +72,7 @@ export type MergedArrival = {
 export type WalkLeg = {
   type: 'walk'
   from: { lat: number; lon: number; name?: string; stopId?: string; stopName?: string }
-  to:   { lat: number; lon: number; name?: string; stopId?: string; stopName?: string }
+  to: { lat: number; lon: number; name?: string; stopId?: string; stopName?: string }
   distanceKm: number
   durationMin: number
 }
@@ -81,7 +81,7 @@ export type BusLeg = {
   type: 'bus'
   route: { routeId: string; routeShortName: string; color: string; direction: string }
   from: { stopId: string; stopName: string }
-  to:   { stopId: string; stopName: string }
+  to: { stopId: string; stopName: string }
   stopCount: number
   durationMin: number
 }
@@ -95,7 +95,7 @@ export type ItineraryOption = {
 
 export type ItineraryResult = {
   from: { address: string; displayName: string; lat: number; lon: number }
-  to:   { address: string; displayName: string; lat: number; lon: number }
+  to: { address: string; displayName: string; lat: number; lon: number }
   walkingOnly: { type: 'walking'; distanceKm: number; durationMin: number }
   options: ItineraryOption[]
 }

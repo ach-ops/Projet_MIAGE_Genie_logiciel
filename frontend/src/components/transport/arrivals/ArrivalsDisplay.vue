@@ -26,7 +26,7 @@ function formatMin(min: number | null): string {
 
 function delayLabel(delay: number | null): string {
   if (delay === null) return '—'
-  if (delay === 0) return 'À l\'heure'
+  if (delay === 0) return "À l'heure"
   return `${delay > 0 ? '+' : ''}${delay} min`
 }
 
@@ -46,12 +46,16 @@ function delayDotClass(delay: number | null): string {
 </script>
 
 <template>
-  <div v-if="show" class="rounded-2xl border border-[#e8ecf3] dark:border-slate-700 shadow-sm overflow-hidden dark:bg-slate-800">
-
+  <div
+    v-if="show"
+    class="rounded-2xl border border-[#e8ecf3] dark:border-slate-700 shadow-sm overflow-hidden dark:bg-slate-800"
+  >
     <!-- ── Titre + arrêt + refresh ── -->
     <div class="px-4 pt-3 pb-2.5 border-b border-[#f0f3f9] dark:border-slate-700">
       <div class="flex items-center justify-between mb-1.5">
-        <span class="flex items-center gap-1.5 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+        <span
+          class="flex items-center gap-1.5 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest"
+        >
           <Clock class="w-3 h-3 text-[#00b7cc]" />
           Prochains passages
         </span>
@@ -64,10 +68,18 @@ function delayDotClass(delay: number | null): string {
           <RefreshCw class="w-3.5 h-3.5" :class="loading ? 'animate-spin text-[#00b7cc]' : ''" />
         </button>
       </div>
-      <h5 class="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">{{ stopName }}</h5>
-      <div v-if="directionName" class="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full bg-[#f0fafe] dark:bg-[#00b7cc]/10 border border-[#00b7cc]/20">
+      <h5 class="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">
+        {{ stopName }}
+      </h5>
+      <div
+        v-if="directionName"
+        class="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full bg-[#f0fafe] dark:bg-[#00b7cc]/10 border border-[#00b7cc]/20"
+      >
         <ArrowRight class="w-3 h-3 text-[#00b7cc] shrink-0" />
-        <span class="text-[11px] font-medium text-[#007a8a] dark:text-[#00b7cc] truncate max-w-[180px]">{{ directionName }}</span>
+        <span
+          class="text-[11px] font-medium text-[#007a8a] dark:text-[#00b7cc] truncate max-w-[180px]"
+          >{{ directionName }}</span
+        >
       </div>
     </div>
 
@@ -81,25 +93,35 @@ function delayDotClass(delay: number | null): string {
     </div>
 
     <!-- ── État vide ── -->
-    <div v-else-if="arrivals.length === 0" class="px-4 py-8 flex flex-col items-center gap-2 text-center">
+    <div
+      v-else-if="arrivals.length === 0"
+      class="px-4 py-8 flex flex-col items-center gap-2 text-center"
+    >
       <Clock class="w-7 h-7 text-slate-200 dark:text-slate-600" />
       <p class="text-[13px] text-slate-400 dark:text-slate-500">Aucun passage à venir</p>
     </div>
 
     <!-- ── Tableau ── -->
     <div v-else>
-
       <!-- En-têtes -->
-      <div class="grid grid-cols-[2fr_2fr_1fr] gap-x-4 px-4 py-2 bg-slate-50 dark:bg-slate-800/80 border-b border-[#e8ecf3] dark:border-slate-700">
-        <div class="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+      <div
+        class="grid grid-cols-[2fr_2fr_1fr] gap-x-4 px-4 py-2 bg-slate-50 dark:bg-slate-800/80 border-b border-[#e8ecf3] dark:border-slate-700"
+      >
+        <div
+          class="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest"
+        >
           <Zap class="w-3 h-3 text-[#00b7cc]" />
           Temps réel
         </div>
-        <div class="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+        <div
+          class="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest"
+        >
           <Clock class="w-3 h-3 text-slate-300 dark:text-slate-600" />
           Théorique
         </div>
-        <div class="flex items-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+        <div
+          class="flex items-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest"
+        >
           Retard
         </div>
       </div>
@@ -112,17 +134,20 @@ function delayDotClass(delay: number | null): string {
           class="grid grid-cols-[2fr_2fr_1fr] gap-x-4 items-center px-4 py-3"
           :class="i === 0 ? 'bg-white dark:bg-slate-800' : 'bg-white/60 dark:bg-slate-800/40'"
         >
-
           <!-- Colonne 1 : Temps réel -->
           <div class="flex items-center gap-2">
             <span
               v-if="arrival.realtimeMin !== null"
               class="text-[16px] font-black tabular-nums"
-              :class="displayMin(arrival)! <= 1 ? 'text-[#00b7cc]' : 'text-slate-800 dark:text-slate-100'"
+              :class="
+                displayMin(arrival)! <= 1 ? 'text-[#00b7cc]' : 'text-slate-800 dark:text-slate-100'
+              "
             >
               {{ formatMin(arrival.realtimeMin) }}
             </span>
-            <span v-else class="text-[13px] text-slate-300 dark:text-slate-600 tabular-nums">—</span>
+            <span v-else class="text-[13px] text-slate-300 dark:text-slate-600 tabular-nums"
+              >—</span
+            >
           </div>
 
           <!-- Colonne 2 : Heure théorique -->
@@ -151,10 +176,8 @@ function delayDotClass(delay: number | null): string {
               {{ delayLabel(arrival.delay) }}
             </span>
           </div>
-
         </div>
       </div>
     </div>
-
   </div>
 </template>

@@ -2,10 +2,10 @@ import { ref } from 'vue'
 import { API_BASE } from '@/config/api'
 
 export type AddressSuggestion = {
-  label:       string
+  label: string
   displayName: string
-  lat:         number
-  lon:         number
+  lat: number
+  lon: number
 }
 
 /**
@@ -20,7 +20,7 @@ export type AddressSuggestion = {
  */
 export function useAddressAutocomplete() {
   const suggestions = ref<AddressSuggestion[]>([])
-  const loading     = ref(false)
+  const loading = ref(false)
 
   let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -33,7 +33,7 @@ export function useAddressAutocomplete() {
     timer = setTimeout(async () => {
       loading.value = true
       try {
-        const res  = await fetch(`${API_BASE}/api/itinerary/suggest?q=${encodeURIComponent(value)}`)
+        const res = await fetch(`${API_BASE}/api/itinerary/suggest?q=${encodeURIComponent(value)}`)
         const data = await res.json()
         suggestions.value = Array.isArray(data) ? data : []
       } catch {

@@ -7,7 +7,7 @@ export function useRouteBadge() {
   function badgeStyle(route: RouteInfo) {
     return {
       backgroundColor: route.route_color ? `#${route.route_color}` : '#004650',
-      color: route.route_text_color ? `#${route.route_text_color}` : '#ffffff',
+      color: route.route_text_color ? `#${route.route_text_color}` : '#ffffff'
     }
   }
 

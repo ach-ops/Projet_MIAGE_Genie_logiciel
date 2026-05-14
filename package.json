@@ -2,5 +2,15 @@
   "dependencies": {
     "mongodb": "^7.1.0",
     "node-cron": "^4.2.1"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.4"
+  },
+  "scripts": {
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "frontend/src/**/*.{ts,vue,css}": "npx prettier --write"
   }
 }
