@@ -45,7 +45,7 @@ body {
     color 0.2s ease;
 }
 
-/* ── Dark mode ───────────────────────────────────────── */
+/* ── Dark mode ───────────────*/
 html.dark {
   /* Couches de fond */
   --dk-bg: #1e2330; /* fond de page                       */
@@ -53,7 +53,7 @@ html.dark {
   --dk-card: #21252f; /* cards, containers                  */
   --dk-hover: #272c3a; /* hover sur surfaces                 */
 
-  /* Bordures semi-transparentes*/
+  /* Bordures semi-transparentes */
   --dk-border: rgba(255, 255, 255, 0.07);
   --dk-border-md: rgba(255, 255, 255, 0.11);
   --dk-border-subtle: rgba(255, 255, 255, 0.04);
@@ -68,7 +68,7 @@ html.dark {
   --dk-accent-dim: rgba(0, 176, 200, 0.12);
   --dk-accent-ring: rgba(0, 176, 200, 0.25);
 
-  /* Ombres — légères, pas de noir pur */
+  /* Ombres */
   --dk-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
   --dk-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.2);
   --dk-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
@@ -83,7 +83,6 @@ html.dark body {
   color: var(--dk-text-1);
 }
 
-/* ── Utilitaires dark ────────────────────────────────────────*/
 html.dark .dk-surface {
   background: var(--dk-surface);
 }
@@ -167,7 +166,6 @@ input:focus {
   display: none;
 }
 
-/* Fade */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.18s ease;
@@ -177,7 +175,6 @@ input:focus {
   opacity: 0;
 }
 
-/* Slide-up */
 .slide-up-enter-active {
   transition:
     opacity 0.22s ease,
