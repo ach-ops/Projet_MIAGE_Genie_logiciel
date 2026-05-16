@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Sun, Moon, Bus, Clock, Map } from 'lucide-vue-next'
+import { Sun, Moon, Bus, Clock, Map, Navigation2 } from 'lucide-vue-next'
 import WeatherComponent from './components/weather/WeatherComponent.vue'
 import NewsTicker from './components/ui/NewsTicker.vue'
 import MapComponent from './components/map/MapComponent.vue'
@@ -9,25 +9,26 @@ import RouteSelector from './components/transport/routes/RouteSelector.vue'
 import DirectionSelector from './components/transport/directions/DirectionSelector.vue'
 import ArrivalsDisplay from './components/transport/arrivals/ArrivalsDisplay.vue'
 import RouteTracer from './components/transport/routes/RouteTracer.vue'
+import ItineraryPanel from './components/transport/itinerary/ItineraryPanel.vue'
+import ItineraryResult from './components/transport/itinerary/ItineraryResult.vue'
 import { useTheme } from '@/composables/useTheme'
 import { useTransportData } from '@/composables/useTransportData'
+import { useItineraryStore } from '@/stores/itinerary'
 
 const { theme, toggle } = useTheme()
+const transport         = useTransportData()
+const itinerary         = useItineraryStore()
 
-// ── Onglet actif sidebar ───────────────────────────────────────────────────
+// ── Onglet actif ───────────────────────────────────────────────────────────
 
-type Tab = 'horaires' | 'trajet'
+type Tab = 'horaires' | 'trajet' | 'itineraires'
 const activeTab = ref<Tab>('horaires')
 
-// ── Données transport (horaires) ───────────────────────────────────────────
+// ── Tracé carte ────────────────────────────────────────────────────────────
 
-const transport = useTransportData()
-
-// ── État tracé carte ───────────────────────────────────────────────────────
-
-const mapRouteId = ref('')
+const mapRouteId     = ref('')
 const mapDirectionId = ref('')
-const mapRouteColor = ref('')
+const mapRouteColor  = ref('')
 
 // ── Init ───────────────────────────────────────────────────────────────────
 
@@ -64,7 +65,7 @@ onMounted(() => {
 
     <!-- ── Corps ──────────────────────────────────────────────────────── -->
     <main class="app-main">
-      <!-- Panneau gauche -->
+      <!-- ── Sidebar ─────────────────────────────────────────────────── -->
       <aside class="app-sidebar">
         <!-- Onglets -->
         <div class="tabs">
@@ -82,13 +83,20 @@ onMounted(() => {
             @click="activeTab = 'trajet'"
           >
             <Map class="w-3.5 h-3.5" />
-            Tracé carte
+            Tracé
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ 'tab-btn--active': activeTab === 'itineraires' }"
+            @click="activeTab = 'itineraires'"
+          >
+            <Navigation2 class="w-3.5 h-3.5" />
+            Itin.
           </button>
         </div>
 
-        <!-- ── Contenu onglet Horaires ──────────────────────────────── -->
+        <!-- ── Onglet Horaires ───────────────────────────────────────── -->
         <div v-if="activeTab === 'horaires'" class="tab-content no-scrollbar">
-          <!-- Recherche arrêt -->
           <div class="panel">
             <p class="panel-label">Arrêt</p>
             <StopSelector
@@ -98,7 +106,6 @@ onMounted(() => {
             />
           </div>
 
-          <!-- Lignes disponibles à cet arrêt -->
           <Transition name="slide-up">
             <div v-if="transport.selectedStopName.value" class="panel">
               <p class="panel-label">Ligne</p>
@@ -111,7 +118,6 @@ onMounted(() => {
             </div>
           </Transition>
 
-          <!-- Direction -->
           <Transition name="slide-up">
             <div v-if="transport.selectedRoute.value" class="panel">
               <p class="panel-label">Direction</p>
@@ -124,7 +130,6 @@ onMounted(() => {
             </div>
           </Transition>
 
-          <!-- Passages -->
           <Transition name="slide-up">
             <ArrivalsDisplay
               v-if="transport.selectedDirection.value"
@@ -138,7 +143,6 @@ onMounted(() => {
             />
           </Transition>
 
-          <!-- Erreur -->
           <Transition name="fade">
             <div v-if="transport.error.value" class="error-banner">
               {{ transport.error.value }}
@@ -146,8 +150,8 @@ onMounted(() => {
           </Transition>
         </div>
 
-        <!-- ── Contenu onglet Tracé carte ───────────────────────────── -->
-        <div v-else class="tab-content no-scrollbar">
+        <!-- ── Onglet Tracé carte ────────────────────────────────────── -->
+        <div v-else-if="activeTab === 'trajet'" class="tab-content no-scrollbar">
           <div class="panel">
             <RouteTracer
               @update:selected-route-id="mapRouteId = $event"
@@ -156,24 +160,33 @@ onMounted(() => {
             />
           </div>
         </div>
+
+        <!-- ── Onglet Itinéraires ─────────────────────────────────────── -->
+        <div v-else class="tab-content no-scrollbar">
+          <ItineraryPanel />
+          <Transition name="slide-up">
+            <ItineraryResult v-if="itinerary.result || itinerary.loading || itinerary.error" />
+          </Transition>
+        </div>
       </aside>
 
-      <!-- Carte -->
-      <div class="map-wrapper">
-        <MapComponent
-          :all-stops="transport.allStops.value"
-          :selected-stop-name="transport.selectedStopName.value || undefined"
-          :selected-route-id="mapRouteId || undefined"
-          :selected-direction-id="mapDirectionId || undefined"
-          :selected-route-color="mapRouteColor || undefined"
-        />
+      <!-- ── Zone carte ─────────────────────────────────────────────── -->
+      <div class="map-area">
+        <div class="map-wrapper">
+          <MapComponent
+            :all-stops="transport.allStops.value"
+            :selected-stop-name="transport.selectedStopName.value || undefined"
+            :selected-route-id="mapRouteId || undefined"
+            :selected-direction-id="mapDirectionId || undefined"
+            :selected-route-color="mapRouteColor || undefined"
+          />
+        </div>
       </div>
     </main>
   </div>
 </template>
 
 <style scoped>
-/* ── Shell ──────────────────────────────────────────────────────────────── */
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -275,14 +288,13 @@ onMounted(() => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 0;
   min-height: 0;
 }
 
 /* ── Tabs ───────────────────────────────────────────────────────────────── */
 .tabs {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   padding: 4px;
   background: white;
   border: 1px solid rgba(0, 0, 0, 0.06);
@@ -302,16 +314,17 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 7px 8px;
+  gap: 4px;
+  padding: 7px 6px;
   border-radius: 10px;
   border: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   transition: background 0.15s, color 0.15s;
   background: transparent;
   color: #64748b;
+  white-space: nowrap;
 }
 .tab-btn:hover { background: #f8fafc; }
 .tab-btn--active {
@@ -322,7 +335,7 @@ onMounted(() => {
 .app-shell.dark .tab-btn:hover { background: rgba(255, 255, 255, 0.06); }
 .app-shell.dark .tab-btn--active {
   background: var(--dk-accent);
-  color: white;
+  color: #0d1117;
 }
 
 /* ── Tab content ────────────────────────────────────────────────────────── */
@@ -363,7 +376,6 @@ onMounted(() => {
 }
 .app-shell.dark .panel-label { color: var(--dk-text-2); }
 
-/* ── Error banner ───────────────────────────────────────────────────────── */
 .error-banner {
   padding: 10px 12px;
   border-radius: 12px;
@@ -371,16 +383,27 @@ onMounted(() => {
   background: #fef2f2;
   color: #b91c1c;
   border: 1px solid #fecaca;
+  flex-shrink: 0;
 }
 .app-shell.dark .error-banner {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.2);
+  background: #3a1515;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+/* ── Zone carte (droite) ─────────────────────────────────────────────────── */
+.map-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* ── Map ─────────────────────────────────────────────────────────────────── */
 .map-wrapper {
   flex: 1;
-  min-width: 0;
+  min-height: 0;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0, 80, 120, 0.1);
