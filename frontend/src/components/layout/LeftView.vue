@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { MapPin, Bus, Navigation, AlertCircle } from 'lucide-vue-next'
 import AppHeader from './AppHeader.vue'
-import type { HeaderTab } from '@/types/types'
+import type { HeaderTab, Stop } from '@/types/types'
 import StopSelector from '../transport/stops/StopSelector.vue'
 import RouteSelector from '../transport/routes/RouteSelector.vue'
 import DirectionSelector from '../transport/directions/DirectionSelector.vue'
@@ -13,7 +13,6 @@ import ItineraryPanel from '../transport/itinerary/ItineraryPanel.vue'
 import ItineraryResult from '../transport/itinerary/ItineraryResult.vue'
 import { useTheme } from '@/composables/useTheme'
 import { useTransportData } from '@/composables/useTransportData'
-import type { Stop } from '@/types/types'
 import { API_BASE } from '@/config/api'
 
 // ── Thème ──────────────────────────────────────────────────────────────────
@@ -99,8 +98,8 @@ watch(selectedRouteColor, (color) => emit('update:selectedRouteColor', color))
 
 <template>
   <div
-    class="flex flex-col h-full overflow-hidden border-t border-r border-white/30 rounded-tr-[16px] shadow-[4px_0_32px_rgba(0,80,120,0.10)] dark:border-[#30363d]/60 dark:shadow-none"
-    :style="theme === 'dark' ? 'background:var(--dk-surface)' : 'background:#f0f5fb'"
+    class="flex flex-col h-full overflow-hidden dark:border-[#30363d]/60 dark:shadow-none"
+    :style="theme === 'dark' ? 'background:var(--dk-surface)' : 'background:#f8f8ff'"
   >
     <!-- ── Header ──────────────────── -->
     <AppHeader
@@ -117,8 +116,8 @@ watch(selectedRouteColor, (color) => emit('update:selectedRouteColor', color))
         <div v-if="activeHeaderTab === 'horaires'" key="horaires" class="p-4 space-y-3">
           <!-- Étape 1 : Arrêt -->
           <div
-            class="rounded-2xl border shadow-sm p-3 sm:p-4"
-            :style="{ background: theme === 'dark' ? 'var(--dk-card)' : 'white', borderColor: theme === 'dark' ? 'var(--dk-border)' : '#e8ecf3' }"
+            class="rounded-2xl border p-3 sm:p-4"
+            :style="{ background: theme === 'dark' ? 'var(--dk-card)' : 'white', borderColor: theme === 'dark' ? 'var(--dk-border)' : 'rgba(0,0,0,0.07)', boxShadow: theme === 'dark' ? 'var(--dk-shadow-sm)' : '0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04)' }"
           >
             <p
               class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 dark:text-[#8b949e] uppercase tracking-widest mb-2"
@@ -206,8 +205,8 @@ watch(selectedRouteColor, (color) => emit('update:selectedRouteColor', color))
         <!-- ── Onglet Itinéraires ── -->
         <div v-else-if="activeHeaderTab === 'itineraires'" key="itineraires" class="p-4">
           <div
-            class="rounded-2xl border shadow-sm p-3 sm:p-4"
-            :style="{ background: theme === 'dark' ? 'var(--dk-card)' : 'white', borderColor: theme === 'dark' ? 'var(--dk-border)' : '#e8ecf3' }"
+            class="rounded-2xl border p-3 sm:p-4"
+            :style="{ background: theme === 'dark' ? 'var(--dk-card)' : 'white', borderColor: theme === 'dark' ? 'var(--dk-border)' : 'rgba(0,0,0,0.07)', boxShadow: theme === 'dark' ? 'var(--dk-shadow-sm)' : '0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04)' }"
           >
             <RouteTracer
               @update:selected-route-id="emit('update:selectedRouteId', $event)"

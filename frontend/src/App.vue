@@ -10,6 +10,6 @@ useTheme()
 <style>
 body {
   margin: 0;
-  background: #f7fafc;
+  background: #d4e2ef;
 }
 </style>

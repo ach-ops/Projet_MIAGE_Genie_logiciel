@@ -90,7 +90,7 @@ function openInfoWindow(marker: google.maps.Marker, content: string) {
   if (activeInfoWindow) activeInfoWindow.close()
   activeInfoWindow = new google.maps.InfoWindow({ content })
   activeInfoWindow.open(map.value!, marker)
-  ;(globalThis as any).__closeActivePopup = () => activeInfoWindow?.close()
+  ;(globalThis as Record<string, unknown>).__closeActivePopup = () => activeInfoWindow?.close()
 }
 
 // ── Icône personnalisée ────────────────────────────────────────────────────

@@ -24,7 +24,7 @@ const panelOpen = ref(false)
     class="flex h-[100dvh] overflow-hidden transition-colors duration-200 safe-left safe-right"
     :style="theme === 'dark'
       ? { background: 'var(--dk-bg)' }
-      : { background: 'radial-gradient(ellipse at 10% 0%, #c7e8f0 0%, transparent 55%), radial-gradient(ellipse at 90% 100%, #ccd7f0 0%, transparent 55%), #dde6f2' }"
+      : { background: 'linear-gradient(150deg, #e8ebff 0%, #eef0ff 60%, #f4f5ff 100%)' }"
   >
     <!-- Mobile -->
     <Transition name="fade">
@@ -40,7 +40,7 @@ const panelOpen = ref(false)
       class="shrink-0 w-[min(340px,92vw)] md:w-[400px] lg:w-[460px] h-full z-[800] md:z-40
              fixed md:relative
              transition-transform duration-300 ease-out
-             shadow-[4px_0_24px_rgba(0,0,0,0.12)] md:shadow-none"
+             border-r border-black/[0.07] shadow-[4px_0_24px_rgba(0,0,0,0.10)]"
       :class="panelOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
     >
       <LeftView
