@@ -25,8 +25,8 @@ const props = defineProps<{
 const mapContainer = ref<HTMLDivElement | null>(null)
 const map = ref<google.maps.Map | null>(null)
 const stopMarker = ref<google.maps.Marker | null>(null)
-const routePolylines = ref<google.maps.Polyline[]>([])
-const routeStopMarkers = ref<google.maps.Marker[]>([])
+let routePolylines: google.maps.Polyline[] = []
+let routeStopMarkers: google.maps.Marker[] = []
 
 // ── État Vélib ─────────────────────────────────────────────────────────────
 
@@ -82,7 +82,7 @@ const DARK_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3d3d3d' }] }
 ]
 
-// ── InfoWindow active ──────────────────────────────────────────────────────
+// ── InfoWindow ──────────────────────────────────────────────────────
 
 let activeInfoWindow: google.maps.InfoWindow | null = null
 
@@ -90,6 +90,7 @@ function openInfoWindow(marker: google.maps.Marker, content: string) {
   if (activeInfoWindow) activeInfoWindow.close()
   activeInfoWindow = new google.maps.InfoWindow({ content })
   activeInfoWindow.open(map.value!, marker)
+  ;(globalThis as any).__closeActivePopup = () => activeInfoWindow?.close()
 }
 
 // ── Icône personnalisée ────────────────────────────────────────────────────
@@ -149,36 +150,39 @@ async function loadVelibStations() {
         }
       })
 
-      const content = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;width:210px;padding:0;overflow:hidden;">
-        <div style="background:linear-gradient(135deg,#00b7cc,#0099ad);padding:12px 30px 10px 14px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div style="width:28px;height:28px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      const content = `<div class="font-sans w-[210px] overflow-hidden">
+        <div class="relative bg-gradient-to-br from-[#00b7cc] to-[#0099ad] pl-3.5 pr-8 pt-3 pb-2.5">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
             </div>
-            <div style="min-width:0;">
-              <div style="color:white;font-size:12px;font-weight:700;line-height:1.3;word-break:break-word;">${station.name}</div>
-              <div style="color:rgba(255,255,255,0.75);font-size:10px;margin-top:3px;line-height:1.4;word-break:break-word;">${station.address || 'Nancy'}</div>
+            <div class="min-w-0">
+              <div class="text-white text-xs font-bold leading-snug break-words">${station.name}</div>
+              <div class="text-white/75 text-[10px] mt-0.5 leading-snug break-words">${station.address || 'Nancy'}</div>
             </div>
           </div>
+          <button onclick="globalThis.__closeActivePopup()" class="absolute top-1.5 right-2 w-4 h-4 rounded-full bg-white/25 flex items-center justify-center hover:bg-white/40 transition-colors cursor-pointer border-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l6 6M7 1L1 7"/></svg>
+          </button>
         </div>
-        <div style="padding:12px 14px;background:${isDark ? '#21252f' : 'white'};">
-          <div style="display:flex;gap:8px;margin-bottom:10px;">
-            <div style="flex:1;background:${isDark ? '#1b1f28' : '#f8fafc'};border-radius:10px;padding:8px 10px;border:1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#e8ecf3'};">
-              <div style="font-size:10px;color:${isDark ? '#8892a8' : '#94a3b8'};font-weight:500;margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px;">Vélos</div>
-              <div style="font-size:20px;font-weight:800;color:${bikeColor};line-height:1;">${bikes}</div>
-              <div style="font-size:10px;color:${isDark ? '#8892a8' : '#94a3b8'};margin-top:1px;">disponibles</div>
+        <div class="p-3 px-3.5 ${isDark ? 'bg-[#21252f]' : 'bg-white'}">
+          <div class="flex gap-2 mb-2.5">
+            <div class="flex-1 rounded-xl p-2 border ${isDark ? 'bg-[#1b1f28] border-white/[0.08]' : 'bg-slate-50 border-[#e8ecf3]'}">
+              <div class="text-[10px] font-medium mb-0.5 uppercase tracking-[0.4px] ${isDark ? 'text-[#8892a8]' : 'text-slate-400'}">Vélos</div>
+              <div class="text-xl font-extrabold leading-none" style="color:${bikeColor}">${bikes}</div>
+              <div class="text-[10px] mt-0.5 ${isDark ? 'text-[#8892a8]' : 'text-slate-400'}">disponibles</div>
             </div>
-            <div style="flex:1;background:${isDark ? '#1b1f28' : '#f8fafc'};border-radius:10px;padding:8px 10px;border:1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#e8ecf3'};">
-              <div style="font-size:10px;color:${isDark ? '#8892a8' : '#94a3b8'};font-weight:500;margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px;">Places</div>
-              <div style="font-size:20px;font-weight:800;color:${dockColor};line-height:1;">${docks}</div>
-              <div style="font-size:10px;color:${isDark ? '#8892a8' : '#94a3b8'};margin-top:1px;">libres</div>
+            <div class="flex-1 rounded-xl p-2 border ${isDark ? 'bg-[#1b1f28] border-white/[0.08]' : 'bg-slate-50 border-[#e8ecf3]'}">
+              <div class="text-[10px] font-medium mb-0.5 uppercase tracking-[0.4px] ${isDark ? 'text-[#8892a8]' : 'text-slate-400'}">Places</div>
+              <div class="text-xl font-extrabold leading-none" style="color:${dockColor}">${docks}</div>
+              <div class="text-[10px] mt-0.5 ${isDark ? 'text-[#8892a8]' : 'text-slate-400'}">libres</div>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div style="flex:1;height:5px;background:${isDark ? 'rgba(255,255,255,0.08)' : '#e8ecf3'};border-radius:99px;overflow:hidden;">
-              <div style="height:100%;width:${bikePercent}%;background:${bikeColor};border-radius:99px;"></div>
+          <div class="flex items-center gap-2">
+            <div class="flex-1 h-[5px] rounded-full overflow-hidden ${isDark ? 'bg-white/[0.08]' : 'bg-[#e8ecf3]'}">
+              <div class="h-full rounded-full transition-[width] duration-300" style="width:${bikePercent}%;background-color:${bikeColor}"></div>
             </div>
-            <span style="font-size:10px;color:${isDark ? '#8892a8' : '#94a3b8'};font-weight:600;flex-shrink:0;">${bikePercent}%</span>
+            <span class="text-[10px] font-semibold flex-shrink-0 ${isDark ? 'text-[#8892a8]' : 'text-slate-400'}">${bikePercent}%</span>
           </div>
         </div>
       </div>`
@@ -223,12 +227,15 @@ async function loadTravaux() {
       icon: markerIcon(getTravauxIconUrl(incident.short_description))
     })
 
-    const content = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0;min-width:200px;">
-      <div style="background:linear-gradient(135deg,#00b7cc,#0099ad);padding:10px 30px 10px 14px;">
-        <span style="color:white;font-size:13px;font-weight:700;line-height:1.3;">${incident.short_description}</span>
+    const content = `<div class="font-sans min-w-[200px]">
+      <div class="relative bg-gradient-to-br from-[#00b7cc] to-[#0099ad] pl-3.5 pr-8 py-2.5">
+        <span class="text-white text-[13px] font-bold leading-snug">${incident.short_description}</span>
+        <button onclick="globalThis.__closeActivePopup()" class="absolute top-1.5 right-2 w-4 h-4 rounded-full bg-white/25 flex items-center justify-center hover:bg-white/40 transition-colors cursor-pointer border-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l6 6M7 1L1 7"/></svg>
+        </button>
       </div>
-      <div style="padding:7px 14px;background:${isDark ? '#21252f' : 'white'};">
-        <span style="font-size:11px;color:${isDark ? '#8892a8' : '#94a3b8'};font-weight:500;">${incident.location.location_description}</span>
+      <div class="px-3.5 py-[7px] ${isDark ? 'bg-[#21252f]' : 'bg-white'}">
+        <span class="text-[11px] font-medium ${isDark ? 'text-[#8892a8]' : 'text-slate-400'}">${incident.location.location_description}</span>
       </div>
     </div>`
 
@@ -252,15 +259,18 @@ function showStopOnMap(stopName: string) {
   stopMarker.value = new google.maps.Marker({
     position: { lat, lng },
     map: map.value,
-    icon: markerIcon(icons.busIcon)
+    icon: markerIcon(icons.busIcon, 60)
   })
 
-  const content = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0;min-width:160px;">
-    <div style="background:linear-gradient(135deg,#00b7cc,#0099ad);padding:10px 30px 10px 14px;">
-      <span style="color:white;font-size:13px;font-weight:700;line-height:1.3;">${stop.stop_name}</span>
+  const content = `<div class="font-sans min-w-[160px]">
+    <div class="relative bg-gradient-to-br from-[#00b7cc] to-[#0099ad] pl-3.5 pr-8 py-2.5">
+      <span class="text-white text-[13px] font-bold leading-snug">${stop.stop_name}</span>
+      <button onclick="globalThis.__closeActivePopup()" class="absolute top-1.5 right-2 w-4 h-4 rounded-full bg-white/25 flex items-center justify-center hover:bg-white/40 transition-colors cursor-pointer border-0">
+        <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l6 6M7 1L1 7"/></svg>
+      </button>
     </div>
-    <div style="padding:7px 14px;background:${isDark ? '#21252f' : 'white'};">
-      <span style="font-size:11px;color:${isDark ? '#8892a8' : '#94a3b8'};font-weight:500;">Arrêt sélectionné</span>
+    <div class="px-3.5 py-[7px] ${isDark ? 'bg-[#21252f]' : 'bg-white'}">
+      <span class="text-[11px] font-medium ${isDark ? 'text-[#8892a8]' : 'text-slate-400'}">Arrêt sélectionné</span>
     </div>
   </div>`
 
@@ -284,112 +294,123 @@ watch(
 // ── Tracé de ligne ─────────────────────────────────────────────────────────
 
 function clearRouteLayers() {
-  routePolylines.value.forEach((p) => p.setMap(null))
-  routePolylines.value = []
-  routeStopMarkers.value.forEach((m) => m.setMap(null))
-  routeStopMarkers.value = []
+  routePolylines.forEach((p) => p.setMap(null))
+  routePolylines = []
+  routeStopMarkers.forEach((m) => m.setMap(null))
+  routeStopMarkers = []
 }
 
-async function fetchShapePoints(routeId: string, directionId: string | number) {
-  const res = await fetch(
-    `${API_BASE}/api/routes/${encodeURIComponent(routeId)}/directions/${encodeURIComponent(String(directionId))}/shape`
-  )
-  const data = await res.json()
-  return (data.points || []) as [number, number][]
+let drawGeneration = 0
+let activeAbort: AbortController | null = null
+let drawTimer: ReturnType<typeof setTimeout> | null = null
+
+async function runDraw(routeId: string, directionId: string, lineColor: string) {
+  if (!map.value) return
+  const gen = ++drawGeneration
+  activeAbort = new AbortController()
+  const signal = activeAbort.signal
+
+  clearRouteLayers()
+  if (!routeId) return
+
+  async function drawDirection(dId: string | number, idx: number, showStops: boolean) {
+    const shapeRes = fetch(
+      `${API_BASE}/api/routes/${encodeURIComponent(routeId)}/directions/${encodeURIComponent(String(dId))}/shape`,
+      { signal }
+    )
+    const stopsRes = fetch(
+      `${API_BASE}/api/routes/${encodeURIComponent(routeId)}/directions/${encodeURIComponent(String(dId))}/stops`,
+      { signal }
+    )
+    const [shapeData, stopsData] = await Promise.all([
+      shapeRes.then((r) => r.json()),
+      stopsRes.then((r) => r.json())
+    ])
+
+    if (gen !== drawGeneration) return
+
+    const points: [number, number][] = shapeData.points || []
+    const stops: { lat: number; lon: number; stopName: string }[] = stopsData.stops || []
+    const validStops = stops.filter((s) => !Number.isNaN(s.lat) && !Number.isNaN(s.lon))
+    const linePoints = points.length > 0 ? points : validStops.map((s): [number, number] => [s.lat, s.lon])
+
+    if (linePoints.length > 1) {
+      routePolylines.push(new google.maps.Polyline({
+        path: linePoints.map(([lat, lng]) => ({ lat, lng })),
+        strokeColor: lineColor,
+        strokeWeight: 5,
+        strokeOpacity: idx === 0 ? 0.85 : 0.55,
+        map: map.value!
+      }))
+    }
+
+    if (showStops) {
+      const isDark = theme.value === 'dark'
+      for (const stop of validStops) {
+        const stopMk = new google.maps.Marker({
+          position: { lat: stop.lat, lng: stop.lon },
+          map: map.value!,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 5,
+            fillColor: '#ffffff',
+            fillOpacity: 1,
+            strokeColor: lineColor,
+            strokeWeight: 3
+          }
+        })
+        const content = `<div class="font-sans min-w-[160px]">
+          <div class="relative pl-3.5 pr-8 py-2.5" style="background:linear-gradient(135deg,${lineColor},${lineColor}cc)">
+            <span class="text-white text-[13px] font-bold leading-snug">${stop.stopName}</span>
+            <button onclick="globalThis.__closeActivePopup()" class="absolute top-1.5 right-2 w-4 h-4 rounded-full bg-white/25 flex items-center justify-center hover:bg-white/40 transition-colors cursor-pointer border-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l6 6M7 1L1 7"/></svg>
+            </button>
+          </div>
+          <div class="px-3.5 py-[7px] ${isDark ? 'bg-[#21252f]' : 'bg-white'}">
+            <span class="text-[11px] font-medium ${isDark ? 'text-[#8892a8]' : 'text-slate-400'}">Arrêt</span>
+          </div>
+        </div>`
+        stopMk.addListener('click', () => openInfoWindow(stopMk, content))
+        routeStopMarkers.push(stopMk)
+      }
+    }
+  }
+
+  try {
+    if (directionId) {
+      await drawDirection(directionId, 0, true)
+    } else {
+      const directionsData: { directionId: number | string }[] = await fetch(
+        `${API_BASE}/api/routes/${encodeURIComponent(routeId)}/directions`,
+        { signal }
+      ).then((r) => r.json())
+      await Promise.all((directionsData || []).map((d, idx) => drawDirection(d.directionId, idx, false)))
+    }
+
+    if (gen !== drawGeneration) return
+
+    if (routePolylines.length > 0 || routeStopMarkers.length > 0) {
+      const bounds = new google.maps.LatLngBounds()
+      routePolylines.forEach((p) => p.getPath().forEach((pt) => bounds.extend(pt)))
+      routeStopMarkers.forEach((m) => { const pos = m.getPosition(); if (pos) bounds.extend(pos) })
+      if (!bounds.isEmpty()) map.value!.fitBounds(bounds, 30)
+    }
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return
+  }
 }
 
 watch(
   () => [props.selectedRouteId, props.selectedDirectionId, props.selectedRouteColor],
-  async ([routeId, directionId, color]) => {
-    if (!map.value) return
-    const lineColor = (color as string) || '#2563eb'
+  ([routeId, directionId, color]) => {
+    // Annule immédiatement le timer et les requêtes en cours
+    if (drawTimer !== null) { clearTimeout(drawTimer); drawTimer = null }
+    activeAbort?.abort()
 
-    clearRouteLayers()
-    if (!routeId) return
-
-    try {
-      async function drawDirection(dId: string | number, idx: number, showStops: boolean) {
-        const [shapePoints, stopsData] = await Promise.all([
-          fetchShapePoints(routeId as string, dId),
-          fetch(
-            `${API_BASE}/api/routes/${encodeURIComponent(routeId as string)}/directions/${encodeURIComponent(String(dId))}/stops`
-          ).then((r) => r.json())
-        ])
-
-        const stops: { lat: number; lon: number; stopName: string }[] = stopsData.stops || []
-        const validStops = stops.filter((s) => !Number.isNaN(s.lat) && !Number.isNaN(s.lon))
-        const linePoints: [number, number][] =
-          shapePoints.length > 0
-            ? shapePoints
-            : validStops.map((s): [number, number] => [s.lat, s.lon])
-
-        if (linePoints.length > 1) {
-          const polyline = new google.maps.Polyline({
-            path: linePoints.map(([lat, lng]) => ({ lat, lng })),
-            strokeColor: lineColor,
-            strokeWeight: 5,
-            strokeOpacity: idx === 0 ? 0.85 : 0.55,
-            map: map.value!
-          })
-          routePolylines.value.push(polyline)
-        }
-
-        if (showStops) {
-          const isDark = theme.value === 'dark'
-          for (const stop of validStops) {
-            const stopMk = new google.maps.Marker({
-              position: { lat: stop.lat, lng: stop.lon },
-              map: map.value!,
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 5,
-                fillColor: '#ffffff',
-                fillOpacity: 1,
-                strokeColor: lineColor,
-                strokeWeight: 3
-              }
-            })
-
-            const content = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0;min-width:160px;">
-              <div style="background:linear-gradient(135deg,${lineColor},${lineColor}cc);padding:10px 30px 10px 14px;">
-                <span style="color:white;font-size:13px;font-weight:700;line-height:1.3;">${stop.stopName}</span>
-              </div>
-              <div style="padding:7px 14px;background:${isDark ? '#21252f' : 'white'};">
-                <span style="font-size:11px;color:${isDark ? '#8892a8' : '#94a3b8'};font-weight:500;">Arrêt</span>
-              </div>
-            </div>`
-
-            stopMk.addListener('click', () => openInfoWindow(stopMk, content))
-            routeStopMarkers.value.push(stopMk)
-          }
-        }
-      }
-
-      if (directionId) {
-        await drawDirection(directionId as string, 0, true)
-      } else {
-        const directionsRes = await fetch(
-          `${API_BASE}/api/routes/${encodeURIComponent(routeId as string)}/directions`
-        )
-        const directionsData: { directionId: number | string }[] = await directionsRes.json()
-        await Promise.all(
-          (directionsData || []).map((d, idx) => drawDirection(d.directionId, idx, false))
-        )
-      }
-
-      // Ajuster la vue sur la ligne tracée
-      if (routePolylines.value.length > 0 || routeStopMarkers.value.length > 0) {
-        const bounds = new google.maps.LatLngBounds()
-        routePolylines.value.forEach((p) => p.getPath().forEach((pt) => bounds.extend(pt)))
-        routeStopMarkers.value.forEach((m) => {
-          const pos = m.getPosition()
-          if (pos) bounds.extend(pos)
-        })
-        if (!bounds.isEmpty()) map.value!.fitBounds(bounds, 30)
-      }
-    } catch {
-      // Shape non disponible — silencieux
-    }
+    drawTimer = setTimeout(() => {
+      drawTimer = null
+      void runDraw(routeId as string, directionId as string, (color as string) || '#2563eb')
+    }, 150)
   }
 )
 
@@ -409,11 +430,10 @@ onMounted(async () => {
     v: 'weekly'
   })
 
-  // Charge les trois bibliothèques nécessaires en parallèle
   await Promise.all([
-    importLibrary('maps'), // Map, InfoWindow, Polyline, SymbolPath
-    importLibrary('core'), // LatLngBounds, Size, Point
-    importLibrary('marker') // Marker (legacy)
+    importLibrary('maps'),
+    importLibrary('core'),
+    importLibrary('marker')
   ])
 
   if (!mapContainer.value) return
@@ -453,3 +473,17 @@ onUnmounted(() => {
     />
   </div>
 </template>
+
+<style>
+.gm-style .gm-style-iw-c {
+  padding: 0 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 8px 24px rgba(2, 8, 20, 0.13) !important;
+  max-width: none !important;
+}
+.gm-style .gm-style-iw-d { overflow: hidden !important; padding: 0 !important; }
+.gm-style .gm-style-iw-chr { height: 0 !important; }
+.gm-style .gm-ui-hover-effect { display: none !important; }
+</style>
