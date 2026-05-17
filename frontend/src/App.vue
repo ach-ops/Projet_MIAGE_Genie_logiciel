@@ -1,140 +1,39 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Sun, Moon, Bus } from 'lucide-vue-next'
+import { Sun, Moon, Bus, Clock, Map, Navigation2 } from 'lucide-vue-next'
 import WeatherComponent from './components/weather/WeatherComponent.vue'
 import NewsTicker from './components/ui/NewsTicker.vue'
 import MapComponent from './components/map/MapComponent.vue'
+import StopSelector from './components/transport/stops/StopSelector.vue'
+import RouteSelector from './components/transport/routes/RouteSelector.vue'
+import DirectionSelector from './components/transport/directions/DirectionSelector.vue'
 import ArrivalsDisplay from './components/transport/arrivals/ArrivalsDisplay.vue'
+import RouteTracer from './components/transport/routes/RouteTracer.vue'
+import ItineraryPanel from './components/transport/itinerary/ItineraryPanel.vue'
+import ItineraryResult from './components/transport/itinerary/ItineraryResult.vue'
 import { useTheme } from '@/composables/useTheme'
-import { useRouteBadge } from '@/composables/useRouteBadge'
-import { API_BASE } from '@/config/api'
-import type { Stop, RouteInfo, Direction, MergedArrival } from '@/types/types'
+import { useTransportData } from '@/composables/useTransportData'
+import { useItineraryStore } from '@/stores/itinerary'
 
 const { theme, toggle } = useTheme()
-const { badgeStyle, sortByType } = useRouteBadge()
+const transport         = useTransportData()
+const itinerary         = useItineraryStore()
 
-// ── Données de base ────────────────────────────────────────────────────────
+// ── Onglet actif ───────────────────────────────────────────────────────────
 
-const allStops = ref<Stop[]>([])
-const routes = ref<RouteInfo[]>([])
-const directions = ref<Direction[]>([])
-const directionStops = ref<Stop[]>([])
+type Tab = 'horaires' | 'trajet' | 'itineraires'
+const activeTab = ref<Tab>('horaires')
 
-// ── Sélections ─────────────────────────────────────────────────────────────
+// ── Tracé carte ────────────────────────────────────────────────────────────
 
-const selectedRouteId = ref('')
-const selectedRouteColor = ref('')
-const selectedDirectionId = ref('')
-const selectedStopName = ref('')
+const mapRouteId     = ref('')
+const mapDirectionId = ref('')
+const mapRouteColor  = ref('')
 
-// ── Arrivées ───────────────────────────────────────────────────────────────
-
-const arrivals = ref<MergedArrival[]>([])
-const arrivalsLoading = ref(false)
-const showArrivals = ref(false)
-const arrivalsStopName = ref('')
-const arrivalsDirectionName = ref('')
-const arrivalsRouteName = ref('')
-
-// ── Chargement initial ─────────────────────────────────────────────────────
-
-async function loadStops() {
-  const res = await fetch(`${API_BASE}/api/stops`)
-  const data = await res.json()
-  allStops.value = data.stops ?? data
-}
-
-async function loadRoutes() {
-  const res = await fetch(`${API_BASE}/api/routes`)
-  const data: RouteInfo[] = (await res.json()) ?? []
-  routes.value = sortByType(data)
-}
-
-// ── Handlers sélection ─────────────────────────────────────────────────────
-
-async function onRouteChange() {
-  selectedDirectionId.value = ''
-  selectedStopName.value = ''
-  directions.value = []
-  directionStops.value = []
-  showArrivals.value = false
-
-  if (!selectedRouteId.value) return
-
-  const route = routes.value.find((r) => r.route_id === selectedRouteId.value)
-  selectedRouteColor.value = route?.route_color ? `#${route.route_color}` : '#00b7cc'
-
-  const res = await fetch(
-    `${API_BASE}/api/routes/${encodeURIComponent(selectedRouteId.value)}/directions`
-  )
-  directions.value = (await res.json()) ?? []
-}
-
-async function onDirectionChange() {
-  selectedStopName.value = ''
-  directionStops.value = []
-  showArrivals.value = false
-
-  if (!selectedRouteId.value || !selectedDirectionId.value) return
-
-  const res = await fetch(
-    `${API_BASE}/api/routes/${encodeURIComponent(selectedRouteId.value)}/directions/${encodeURIComponent(selectedDirectionId.value)}/stops`
-  )
-  const data = await res.json()
-  const rawStops: {
-    stopId?: string
-    stop_id?: string
-    stopName?: string
-    stop_name?: string
-    lat?: number
-    stop_lat?: string
-    lon?: number
-    stop_lon?: string
-  }[] = data.stops ?? data
-
-  directionStops.value = rawStops.map((s) => ({
-    stop_id: s.stopId ?? s.stop_id ?? '',
-    stop_name: s.stopName ?? s.stop_name ?? '',
-    stop_lat: String(s.lat ?? s.stop_lat ?? ''),
-    stop_lon: String(s.lon ?? s.stop_lon ?? '')
-  }))
-}
-
-async function fetchArrivals() {
-  const stop =
-    directionStops.value.find((s) => s.stop_name === selectedStopName.value) ??
-    allStops.value.find((s) => s.stop_name === selectedStopName.value)
-  if (!stop) return
-
-  const route = routes.value.find((r) => r.route_id === selectedRouteId.value)
-  const direction = directions.value.find(
-    (d) => String(d.directionId) === selectedDirectionId.value
-  )
-
-  arrivalsStopName.value = selectedStopName.value
-  arrivalsDirectionName.value = direction?.label ?? ''
-  arrivalsRouteName.value = route?.route_short_name ?? ''
-  arrivalsLoading.value = true
-  showArrivals.value = true
-  arrivals.value = []
-
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/stops/${encodeURIComponent(stop.stop_id)}/arrivals` +
-        `?routeId=${encodeURIComponent(selectedRouteId.value)}` +
-        `&directionId=${encodeURIComponent(selectedDirectionId.value)}`
-    )
-    arrivals.value = (await res.json()) ?? []
-  } catch {
-    arrivals.value = []
-  } finally {
-    arrivalsLoading.value = false
-  }
-}
+// ── Init ───────────────────────────────────────────────────────────────────
 
 onMounted(() => {
-  void loadStops()
-  void loadRoutes()
+  transport.fetchStops()
 })
 </script>
 
@@ -164,94 +63,130 @@ onMounted(() => {
       <NewsTicker />
     </div>
 
-    <!-- ── Corps principal ────────────────────────────────────────────── -->
+    <!-- ── Corps ──────────────────────────────────────────────────────── -->
     <main class="app-main">
-      <!-- Panneau gauche -->
-      <aside class="app-sidebar no-scrollbar">
-        <!-- Sélecteur de ligne -->
-        <div class="panel">
-          <p class="panel-label">Ligne</p>
-          <div class="route-grid no-scrollbar">
-            <button
-              v-for="route in routes"
-              :key="route.route_id"
-              class="route-badge"
-              :style="badgeStyle(route)"
-              :class="{ 'route-badge--active': selectedRouteId === route.route_id }"
-              @click="selectedRouteId = route.route_id; onRouteChange()"
-            >
-              {{ route.route_short_name }}
-            </button>
+      <!-- ── Sidebar ─────────────────────────────────────────────────── -->
+      <aside class="app-sidebar">
+        <!-- Onglets -->
+        <div class="tabs">
+          <button
+            class="tab-btn"
+            :class="{ 'tab-btn--active': activeTab === 'horaires' }"
+            @click="activeTab = 'horaires'"
+          >
+            <Clock class="w-3.5 h-3.5" />
+            Horaires
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ 'tab-btn--active': activeTab === 'trajet' }"
+            @click="activeTab = 'trajet'"
+          >
+            <Map class="w-3.5 h-3.5" />
+            Tracé
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ 'tab-btn--active': activeTab === 'itineraires' }"
+            @click="activeTab = 'itineraires'"
+          >
+            <Navigation2 class="w-3.5 h-3.5" />
+            Itin.
+          </button>
+        </div>
+
+        <!-- ── Onglet Horaires ───────────────────────────────────────── -->
+        <div v-if="activeTab === 'horaires'" class="tab-content no-scrollbar">
+          <div class="panel">
+            <p class="panel-label">Arrêt</p>
+            <StopSelector
+              :loading="transport.loadingStops.value"
+              :stop-names="transport.uniqueStopNames.value"
+              @update:selected-stop="transport.selectedStopName.value = $event"
+            />
+          </div>
+
+          <Transition name="slide-up">
+            <div v-if="transport.selectedStopName.value" class="panel">
+              <p class="panel-label">Ligne</p>
+              <RouteSelector
+                :routes="transport.routes.value"
+                :loading="transport.loadingRoutes.value"
+                :show="true"
+                @update:selected-route="transport.selectedRoute.value = $event"
+              />
+            </div>
+          </Transition>
+
+          <Transition name="slide-up">
+            <div v-if="transport.selectedRoute.value" class="panel">
+              <p class="panel-label">Direction</p>
+              <DirectionSelector
+                :directions="transport.directions.value"
+                :loading="transport.loadingDirections.value"
+                :show="true"
+                @update:selected-direction="transport.selectedDirection.value = $event"
+              />
+            </div>
+          </Transition>
+
+          <Transition name="slide-up">
+            <ArrivalsDisplay
+              v-if="transport.selectedDirection.value"
+              :arrivals="transport.mergedArrivals.value"
+              :loading="transport.loadingArrivals.value"
+              :show="true"
+              :stop-name="transport.resultStopName.value"
+              :direction-name="transport.directionName.value"
+              :route-name="transport.selectedRouteName.value"
+              @refresh="transport.refreshArrivals()"
+            />
+          </Transition>
+
+          <Transition name="fade">
+            <div v-if="transport.error.value" class="error-banner">
+              {{ transport.error.value }}
+            </div>
+          </Transition>
+        </div>
+
+        <!-- ── Onglet Tracé carte ────────────────────────────────────── -->
+        <div v-else-if="activeTab === 'trajet'" class="tab-content no-scrollbar">
+          <div class="panel">
+            <RouteTracer
+              @update:selected-route-id="mapRouteId = $event"
+              @update:selected-direction-id="mapDirectionId = $event"
+              @update:selected-route-color="mapRouteColor = $event"
+            />
           </div>
         </div>
 
-        <!-- Sélecteur de direction -->
-        <Transition name="slide-up">
-          <div v-if="directions.length" class="panel">
-            <p class="panel-label">Direction</p>
-            <div class="stack">
-              <button
-                v-for="dir in directions"
-                :key="dir.directionId"
-                class="list-btn"
-                :class="{ 'list-btn--active': selectedDirectionId === String(dir.directionId) }"
-                @click="selectedDirectionId = String(dir.directionId); onDirectionChange()"
-              >
-                {{ dir.label }}
-              </button>
-            </div>
-          </div>
-        </Transition>
-
-        <!-- Sélecteur d'arrêt -->
-        <Transition name="slide-up">
-          <div v-if="directionStops.length" class="panel">
-            <p class="panel-label">Arrêt</p>
-            <div class="stop-list no-scrollbar">
-              <button
-                v-for="stop in directionStops"
-                :key="stop.stop_id"
-                class="list-btn list-btn--sm"
-                :class="{ 'list-btn--active': selectedStopName === stop.stop_name }"
-                @click="selectedStopName = stop.stop_name; fetchArrivals()"
-              >
-                {{ stop.stop_name }}
-              </button>
-            </div>
-          </div>
-        </Transition>
-
-        <!-- Arrivées -->
-        <Transition name="slide-up">
-          <ArrivalsDisplay
-            v-if="showArrivals"
-            :arrivals="arrivals"
-            :loading="arrivalsLoading"
-            :show="showArrivals"
-            :stop-name="arrivalsStopName"
-            :direction-name="arrivalsDirectionName"
-            :route-name="arrivalsRouteName"
-            @refresh="fetchArrivals"
-          />
-        </Transition>
+        <!-- ── Onglet Itinéraires ─────────────────────────────────────── -->
+        <div v-else class="tab-content no-scrollbar">
+          <ItineraryPanel />
+          <Transition name="slide-up">
+            <ItineraryResult v-if="itinerary.result || itinerary.loading || itinerary.error" />
+          </Transition>
+        </div>
       </aside>
 
-      <!-- Carte -->
-      <div class="map-wrapper">
-        <MapComponent
-          :all-stops="allStops"
-          :selected-stop-name="selectedStopName || undefined"
-          :selected-route-id="selectedRouteId || undefined"
-          :selected-direction-id="selectedDirectionId || undefined"
-          :selected-route-color="selectedRouteColor || undefined"
-        />
+      <!-- ── Zone carte ─────────────────────────────────────────────── -->
+      <div class="map-area">
+        <div class="map-wrapper">
+          <MapComponent
+            :all-stops="transport.allStops.value"
+            :selected-stop-name="transport.selectedStopName.value || undefined"
+            :selected-route-id="mapRouteId || undefined"
+            :selected-direction-id="mapDirectionId || undefined"
+            :selected-route-color="mapRouteColor || undefined"
+          />
+        </div>
       </div>
     </main>
   </div>
 </template>
 
 <style scoped>
-/* ── Shell ──────────────────────────────────────────────────────────────── */
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -259,9 +194,7 @@ onMounted(() => {
   overflow: hidden;
   background: #e2eaf4;
   color: #0f172a;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 .app-shell.dark {
   background: var(--dk-bg);
@@ -307,15 +240,10 @@ onMounted(() => {
   display: none;
 }
 @media (min-width: 640px) {
-  .brand-name {
-    display: block;
-  }
+  .brand-name { display: block; }
 }
 
-.header-weather {
-  flex: 1;
-  min-width: 0;
-}
+.header-weather { flex: 1; min-width: 0; }
 
 .theme-toggle {
   width: 34px;
@@ -328,22 +256,16 @@ onMounted(() => {
   justify-content: center;
   flex-shrink: 0;
   background: #f1f5f9;
-  color: #64748b;
-  transition:
-    background 0.15s,
-    color 0.15s;
+  color: #475569;
+  transition: background 0.15s;
   padding: 0;
 }
-.theme-toggle:hover {
-  background: #e2e8f0;
-}
+.theme-toggle:hover { background: #e2e8f0; }
 .app-shell.dark .theme-toggle {
   background: rgba(255, 255, 255, 0.07);
   color: var(--dk-text-2);
 }
-.app-shell.dark .theme-toggle:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
+.app-shell.dark .theme-toggle:hover { background: rgba(255, 255, 255, 0.12); }
 
 /* ── Ticker ─────────────────────────────────────────────────────────────── */
 .ticker-bar {
@@ -362,12 +284,68 @@ onMounted(() => {
 
 /* ── Sidebar ────────────────────────────────────────────────────────────── */
 .app-sidebar {
-  width: 272px;
+  width: 288px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  min-height: 0;
+}
+
+/* ── Tabs ───────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0, 80, 120, 0.05);
+}
+.app-shell.dark .tabs {
+  background: var(--dk-card);
+  border-color: var(--dk-border);
+  box-shadow: var(--dk-shadow-sm);
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 6px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+  background: transparent;
+  color: #64748b;
+  white-space: nowrap;
+}
+.tab-btn:hover { background: #f8fafc; }
+.tab-btn--active {
+  background: #007a8a;
+  color: white;
+}
+.app-shell.dark .tab-btn { color: var(--dk-text-2); }
+.app-shell.dark .tab-btn:hover { background: rgba(255, 255, 255, 0.06); }
+.app-shell.dark .tab-btn--active {
+  background: var(--dk-accent);
+  color: #0d1117;
+}
+
+/* ── Tab content ────────────────────────────────────────────────────────── */
+.tab-content {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* ── Panel card ─────────────────────────────────────────────────────────── */
@@ -380,6 +358,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 8px;
   box-shadow: 0 1px 4px rgba(0, 80, 120, 0.05);
+  flex-shrink: 0;
 }
 .app-shell.dark .panel {
   background: var(--dk-card);
@@ -395,106 +374,36 @@ onMounted(() => {
   letter-spacing: 0.08em;
   color: #94a3b8;
 }
-.app-shell.dark .panel-label {
-  color: var(--dk-text-2);
+.app-shell.dark .panel-label { color: var(--dk-text-2); }
+
+.error-banner {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  flex-shrink: 0;
+}
+.app-shell.dark .error-banner {
+  background: #3a1515;
+  border-color: #7f1d1d;
+  color: #fca5a5;
 }
 
-/* ── Routes grid ────────────────────────────────────────────────────────── */
-.route-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  max-height: 160px;
-  overflow-y: auto;
-}
-
-.route-badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 7px;
-  border: none;
-  cursor: pointer;
-  opacity: 0.82;
-  transition:
-    opacity 0.12s,
-    box-shadow 0.12s;
-}
-.route-badge:hover {
-  opacity: 1;
-}
-.route-badge--active {
-  opacity: 1;
-  box-shadow:
-    0 0 0 2px white,
-    0 0 0 4px #00b7cc;
-}
-.app-shell.dark .route-badge--active {
-  box-shadow:
-    0 0 0 2px var(--dk-card),
-    0 0 0 4px var(--dk-accent);
-}
-
-/* ── List buttons (direction / arrêt) ────────────────────────────────────── */
-.stack {
+/* ── Zone carte (droite) ─────────────────────────────────────────────────── */
+.map-area {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-}
-
-.stop-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  max-height: 192px;
-  overflow-y: auto;
-}
-
-.list-btn {
-  text-align: left;
-  font-size: 12px;
-  padding: 7px 10px;
-  border-radius: 9px;
-  border: none;
-  cursor: pointer;
-  transition:
-    background 0.12s,
-    color 0.12s;
-  background: #f8fafc;
-  color: #475569;
-  width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.list-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
-}
-.app-shell.dark .list-btn {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--dk-text-2);
-}
-.app-shell.dark .list-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--dk-text-1);
-}
-
-.list-btn--active {
-  background: #00b7cc !important;
-  color: white !important;
-  font-weight: 600;
-}
-
-.list-btn--sm {
-  font-size: 12px;
-  padding: 5px 10px;
+  gap: 10px;
 }
 
 /* ── Map ─────────────────────────────────────────────────────────────────── */
 .map-wrapper {
   flex: 1;
-  min-width: 0;
+  min-height: 0;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0, 80, 120, 0.1);
