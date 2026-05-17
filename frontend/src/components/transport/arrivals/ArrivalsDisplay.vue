@@ -48,7 +48,8 @@ function delayDotClass(delay: number | null): string {
 <template>
   <div
     v-if="show"
-    class="rounded-2xl border border-[#e8ecf3] dark:border-slate-700 shadow-sm overflow-hidden dark:bg-slate-800"
+    class="rounded-2xl border border-[#e8ecf3] dark:border-slate-700 overflow-hidden dark:bg-slate-800"
+    style="box-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04)"
   >
     <!-- ── Titre + arrêt + refresh ── -->
     <div class="px-4 pt-3 pb-2.5 border-b border-[#f0f3f9] dark:border-slate-700">

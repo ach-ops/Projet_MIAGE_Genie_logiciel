@@ -58,25 +58,12 @@ function badgeStyle(color: string) { return { background: color, color: '#fff' }
 
   <!-- ── Résultats ── -->
   <div v-else-if="store.result" class="space-y-2">
-    <!-- Résumé A → B
-    <div class="flex items-center gap-2 px-1 py-0.5">
-      <div class="flex flex-col items-center gap-0.5 shrink-0">
-        <span class="w-[15px] h-[15px] rounded-full flex items-center justify-center text-[8px] font-black text-white" style="background:#00b7cc">A</span>
-        <span class="w-px h-2.5" :class="theme === 'dark' ? 'bg-[var(--dk-border-md)]' : 'bg-slate-200'"></span>
-        <span class="w-[15px] h-[15px] rounded-full flex items-center justify-center text-[8px] font-black text-white" style="background:#e07b54">B</span>
-      </div>
-      <div class="flex-1 min-w-0 space-y-0.5">
-        <p class="text-[12px] font-semibold truncate" :class="theme === 'dark' ? 'text-[var(--dk-text-1)]' : 'text-slate-700'">{{ store.result.from.address }}</p>
-        <p class="text-[12px] font-semibold truncate" :class="theme === 'dark' ? 'text-[var(--dk-text-1)]' : 'text-slate-700'">{{ store.result.to.address }}</p>
-      </div>
-    </div>-->
-
     <!-- Option tout à pied -->
     <div
       class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl"
       :style="store.result.options.length === 0
-        ? 'border-width:1px; border-style:solid; background:#2ea04320; border-color:#2ea04360'
-        : 'border-width:1px; border-style:solid; background:#2ea04312; border-color:#2ea04338'"
+        ? 'border-width:1px; border-style:solid; background:#2ea04320; border-color:#2ea04360; box-shadow:0 2px 12px rgba(0,0,0,0.07),0 1px 3px rgba(0,0,0,0.04)'
+        : 'border-width:1px; border-style:solid; background:#2ea04312; border-color:#2ea04338; box-shadow:0 2px 12px rgba(0,0,0,0.07),0 1px 3px rgba(0,0,0,0.04)'"
     >
       <div
         class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
@@ -91,7 +78,7 @@ function badgeStyle(color: string) { return { background: color, color: '#fff' }
           <span
             v-if="store.result.options.length === 0"
             class="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold"
-            style="background:#2ea04330; color:#2ea043"
+            style="background:#2ea04330; color:#1a7a30"
           >
             Recommandé
           </span>
@@ -129,7 +116,7 @@ function badgeStyle(color: string) { return { background: color, color: '#fff' }
       v-for="(option, i) in store.result.options"
       :key="i"
       class="rounded-xl border overflow-hidden"
-      :style="{ borderColor: theme === 'dark' ? 'var(--dk-border-md)' : '#e2e8f0' }"
+      :style="{ borderColor: theme === 'dark' ? 'var(--dk-border-md)' : '#e2e8f0', boxShadow: theme === 'dark' ? 'var(--dk-shadow-sm)' : '0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04)' }"
     >
       <!-- Header cliquable -->
       <button

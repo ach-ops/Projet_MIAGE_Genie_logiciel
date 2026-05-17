@@ -16,10 +16,10 @@ import itineraryRoutes from './routes/itinerary.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** Limite globale : 200 req/min par IP */
+/** Limite globale : 400 req/min par IP */
 const globalLimiter = rateLimit({
   windowMs: 60_000,
-  max: 200,
+  max: 400,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Trop de requêtes. Réessayez dans une minute.' },
