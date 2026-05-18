@@ -14,6 +14,7 @@ WORKDIR /app
 
 COPY --from=deps --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node . .
+RUN chmod -R a-w .
 
 ENV NODE_ENV=production
 
