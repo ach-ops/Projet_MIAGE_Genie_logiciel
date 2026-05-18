@@ -1,0 +1,46 @@
+# Ignore build outputs
+node_modules/
+dist/
+build/
+
+# Ignore environment files
+.env
+.env.*
+
+# Ignore lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Ignore logs
+*.log
+
+# Ignore coverage
+coverage/
+
+# Ignore IDE and OS files
+.vscode/
+.DS_Store
+
+# Ignore generated files
+*.min.js
+*.min.css
+
+# Ignore images and binaries
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.webp
+*.pdf
+*.zip
+*.tar.gz
+*.rar
+
+# Custom: ignore public assets
+public/images/
+
+
+.husky/

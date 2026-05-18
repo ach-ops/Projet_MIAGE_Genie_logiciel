@@ -1,0 +1,2 @@
+﻿feed_publisher_name,feed_start_date,feed_end_date,feed_version,feed_lang,feed_publisher_url
+STAN - Nancy,20260210,20260630,10/02/2026-16:33,fr,http://fluo.grandest.fr

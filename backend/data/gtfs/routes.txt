@@ -1,0 +1,42 @@
+﻿route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
+11,249,"11","Artem <> Saulxures Lorraine",,3,,FF7900,000000
+12,249,"12","Heillecourt <> Malzéville Savlons",,3,,99C225,000000
+13,249,"13","Maxéville EcoParc <> Dommartemont",,3,,33533C,FFFFFF
+14,249,"14exp","Express - Ludres <> Nancy Gare",,3,,189E6B,FFFFFF
+15,249,"15","Seichamps Ecoquartier<> Nancy Gare",,3,,73C7D2,000000
+16,249,"16","Villers Clairlieu <> Malzéville",,3,,1F94CB,FFFFFF
+17,249,"17","Villers Campus <> Ludres",,3,,3A5C88,FFFFFF
+2,249,"T2","Tempo 2 - Laxou Sapiniere <> Laneuveville Centre",,3,,0069B4,FFFFFF
+20,249,"20","Art-sur-Meurthe <> Nancy Gare",,3,,593C90,FFFFFF
+21,249,"21","Ludres/Fléville <> Nancy Gare",,3,,953B8E,FFFFFF
+3,249,"T3","Tempo 3 - Villers Campus  <> Seichamps Haie Cerlin",,3,,009639,FFFFFF
+4,249,"T4","Tempo 4 - Laxou CLB <> Houdemont Porte Sud",,3,,FFDD04,000000
+5,249,"T5","Maxeville Meurthe Canal - Vandoeuvre Roberval",,3,,4B2884,FFFFFF
+22,249,"22","Saint Max Gérard Barrois <> Porte Verte",,3,,D2388D,FFFFFF
+30,249,"30","Laneuveville Gare <> Villers Campus",,3,,C66A6A,000000
+32,249,"32","Nancy Jean Lamour <>Gérard Barrois",,3,,F7A63F,000000
+33,249,"33","Vandoeuvre Parc des Exposition <> Nancy Gare",,3,,F6CE54,000000
+41,249,"CITADINE 1","Citadine 1 - Citadine Nancy",,3,,4AB79B,000000
+42,249,"CITADINE 2","Citadine 2 - Citadine Vandoeuvre",,3,,349DC0,000000
+50,249,"50","Jarville Sion <> Ludres",,3,,0000CC,FFFFFF
+51,249,"51","Villers Clairlieu <> Villers Lycée Stanislas",,3,,00CCCC,000000
+52,249,"52","Villers G. Chepfer <> Villers Lycée Stanislas",,3,,006666,FFFFFF
+53,249,"53","Malzéville le Nid <> Malzéville Paul Verlaine",,3,,99FF00,000000
+54,249,"54","Dommartemont Nickles <> Malzéville Verlaine",,3,,CC0099,FFFFFF
+55,249,"55","Jarville Léon Songeur <> Heillecourt Montaigu",,3,,FF0000,FFFFFF
+56,249,"56","Fléville <> Jarville Sion",,3,,66FF66,000000
+57,249,"57","Vandoeuvre Simone de Beauvoir <> Vélodrome",,3,,006666,FFFFFF
+58,249,"58","Dommartemont Nickles <> Tomblaine Grp ScolR",,3,,009999,FFFFFF
+59,249,"59","Tomblaine Groupe Scolaire <> Saulxures Foret",,3,,000000,FFFFFF
+60,249,"60","Tomblaine Groupe Scolaire <> Art-sur-Meurthe",,3,,0066CC,FFFFFF
+61,249,"61","Nancy Gare <> Art-sur-Meurthe - Bosserville",,3,,9900FF,FFFFFF
+64,249,"64","Nancy Tilleul Argenté <> Georges de la Tour",,3,,FF6633,000000
+65,249,"65","Malzéville Margeville <>Nancy Division de Fer",,3,,9900FF,FFFFFF
+66,249,"66","Villers Lycée Stanislas <> Fléville",,3,,00CC66,000000
+67,249,"67","Ludres J. Monod <> Fléville l'Orée du Bois",,3,,FF6699,000000
+63,249,"63","Laxou Jet d'eau <> Laxou V. Prouvé",,3,,FFCC00,000000
+62,249,"62","Nancy Gare <> Malzéville Pixerécourt",,3,,FF33CC,000000
+1,249,"T1","Tempo 1",,3,,E30613,FFFFFF
+7,249,"Corol","Corol - Lx Plateau de Haye<>Lx Plateau de haye",,3,,83171A,FFFFFF
+43,249,"PLEINE LUNE","Ligne Pleine Lune",,3,,FFED00,000000
+FLEXO,249,"FLEXO SOIREE","FLEXO SOIREE",,3,,333333,FFFFFF

@@ -1,0 +1,2 @@
+﻿agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email
+249,"STAN Nancy",https://ww.reseau-stan.com/,Europe/Paris,fr,+33(0)3 83 30 08 08,,

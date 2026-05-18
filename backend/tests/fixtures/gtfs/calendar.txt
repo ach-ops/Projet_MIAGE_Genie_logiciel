@@ -1,0 +1,3 @@
+service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+SERVICE_ALL,1,1,1,1,1,1,1,20250101,20291231
+SERVICE_INACTIVE,0,0,0,0,0,0,0,20250101,20291231
