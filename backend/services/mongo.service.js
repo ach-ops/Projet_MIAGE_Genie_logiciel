@@ -43,7 +43,14 @@ export async function connectDB() {
   await collection.createIndex({ routeId: 1, terminal: 1 }, { unique: true });
   await collection.createIndex({ routeId: 1 });
 
-  const safeUri = (config.mongoUri ?? '').replace(/:([^@]+)@/, ':****@');
+  let safeUri;
+  try {
+    const u = new URL(config.mongoUri ?? '');
+    if (u.password) u.password = '****';
+    safeUri = u.toString();
+  } catch {
+    safeUri = config.mongoUri ? '(URI non parseable)' : '';
+  }
   logger.info(`MongoDB connecté → ${safeUri} / ${config.mongoDb}`);
 }
 

@@ -12,14 +12,17 @@ RUN apk add --no-cache dumb-init
 
 WORKDIR /app
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node . .
+RUN chmod -R a-w .
 
 ENV NODE_ENV=production
 
 ENV PORT=8080
 
 EXPOSE 8080
+
+USER node
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "index.js"]
