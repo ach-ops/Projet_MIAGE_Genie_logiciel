@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+coverage
+tests
+*.test.js
+*.spec.js
+vitest.config.js
+.husky
+.oxlintrc*
+.eslintrc*
+README.md
+Dockerfile
+.dockerignore

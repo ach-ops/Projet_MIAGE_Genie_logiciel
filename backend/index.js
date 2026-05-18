@@ -1,40 +1,41 @@
-import express from "express";
-import swaggerUi from "swagger-ui-express";
-import swaggerJsdoc from "swagger-jsdoc";
-import transportRoutes from "./controllers/transport.controllers.js";
-import travauxController from "./controllers/travaux.controllers.js"
-import { loadGTFS } from "./services/gtfs.service.js";
-import { connectDB } from "./services/mongo.service.js";
-import { startCron } from "./cronjobs/delay.cron.js";
+import 'dotenv/config';
+import { config } from './config/index.js';
+import { logger } from './utils/logger.js';
+import { loadGTFS } from './services/gtfs.service.js';
+import { connectDB } from './services/mongo.service.js';
+import { startCron } from './cronjobs/delay.cron.js';
+import { createApp } from './app.js';
 
+try {
+  await connectDB();
+} catch (err) {
+  logger.warn('MongoDB indisponible', { message: err.message });
+}
 
-// Lancement de la connexion à MongoDB avant de démarrer le serveur
-await connectDB()
 await loadGTFS();
 startCron();
 
-const app = express();
+const app = createApp();
 
-// Configuration Swagger
-const swaggerOptions = {
-    definition: {
-        openapi: "3.0.0",
-        info: {
-            title: "API Transport",
-            version: "1.0.0",
-            description: "Documentation de l'API pour le projet transport",
-        },
-    },
-    apis: ["./routes/*.js", "./controllers/*.js"],
-};
-
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-
-app.use("/api", transportRoutes);
-app.use("/api/travaux", travauxController);
-
-app.listen(3000, "0.0.0.0", () => {
-    console.log("API STAN Lancé sur le port 3000 (accessible sur le réseau local)");
+const server = app.listen(config.port, '0.0.0.0', () => {
+  logger.info(`API démarrée sur le port ${config.port}`);
+  logger.info(`Swagger : http://localhost:${config.port}/api-docs`);
 });
+
+// Permet aux requêtes en cours de se terminer avant d'arrêter le process.
+function shutdown(signal) {
+  logger.info(`Signal ${signal} reçu — fermeture en cours…`);
+  server.close(() => {
+    logger.info('Serveur HTTP fermé. Arrêt du process.');
+    process.exit(0);
+  });
+
+  // on force la fermeture si les connexions ne se libèrent pas dans les 10s
+  setTimeout(() => {
+    logger.error('Fermeture forcée');
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));

@@ -1,18 +1,24 @@
-import cron from "node-cron"
-import { computeDelays } from "../services/delay.service.js"
+/**
+ * Cron : calcul automatique des retards des bus.
+ *
+ * Se déclenche toutes les 15 minutes et appelle computeDelays()
+ * qui compare les horaires théoriques aux données temps réel,
+ * puis enregistre les résultats dans MongoDB.
+ */
+import cron from 'node-cron';
+import { computeDelays } from '../services/delay.service.js';
+import { logger } from '../utils/logger.js';
 
 export function startCron() {
+  logger.info('Cron initialisé (calcul retards toutes les 15 min)');
 
-  console.log("Cron initialisé")
+  cron.schedule('*/15 * * * *', async () => {
 
-  cron.schedule("*/30 * * * *", async () => {
-    console.log("⏱ Cron lancé :", new Date().toLocaleTimeString())
-
-    try {
-      await computeDelays()
-      console.log("Retards calculés et stockés")
-    } catch (err) {
-      console.error("Erreur cron :", err)
-    }
-  })
+  logger.info('Cron : démarrage calcul retards');
+  try {
+    await computeDelays();
+  } catch (err) {
+    logger.error('Cron : erreur lors du calcul des retards', { message: err.message, stack: err.stack });
+  }
+  });
 }
