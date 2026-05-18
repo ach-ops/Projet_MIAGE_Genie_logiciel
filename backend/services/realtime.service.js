@@ -269,5 +269,5 @@ export async function getFeedRouteIds() {
   for (const entity of feed.entity) {
     if (entity.tripUpdate?.trip?.routeId) ids.add(entity.tripUpdate.trip.routeId);
   }
-  return Array.from(ids).sort();
+  return Array.from(ids).sort((a, b) => a.localeCompare(b));
 }
