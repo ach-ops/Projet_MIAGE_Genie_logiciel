@@ -11,10 +11,10 @@ import { logger } from '../utils/logger.js';
 
 const CITY = 'Nancy';
 
-// Cache en mémoire avec une durée de vie de 5 minutes.
+// Cache en mémoire avec une durée de vie de 3 heures.
 let _cache       = null;
 let _cacheExpiry = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 3 * 60 * 60 * 1000;
 
 async function getWeather() {
   const now = Date.now();
@@ -72,7 +72,7 @@ async function getWeather() {
     },
   };
 
-  // Mise en cache du résultat pour 5 minutes
+  // Mise en cache du résultat pour 3 heures
   _cache       = result;
   _cacheExpiry = now + CACHE_TTL_MS;
 
