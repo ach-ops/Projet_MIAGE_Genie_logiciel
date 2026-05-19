@@ -23,6 +23,7 @@ import {
   getAllTerminals,
   getActiveServiceIds,
   hasUpcomingDeparture,
+  getNextDepartureMins,
   getTransferStops,
   debugStop,
 } from '../../services/gtfs.service.js';
@@ -276,5 +277,71 @@ describe('debugStop', () => {
     for (const route of result.routes) {
       expect(route).toHaveProperty('nextPassageInMin');
     }
+  });
+});
+
+// ─── getNextDepartureMins ─────────────────────────────────────────────────────
+//
+// Fixture de référence :
+//   STOP_A — ROUTE_1 dir 0 : TRIP_1A à 07:00, TRIP_1B à 08:00 (SERVICE_ALL)
+//                             TRIP_INACTIVE à 11:00 (SERVICE_INACTIVE — inactif le 06/04)
+//   STOP_A — ROUTE_1 dir 1 : TRIP_1C à 09:30 (SERVICE_ALL)
+//   STOP_A — ROUTE_2 dir 0 : TRIP_2A à 10:00 (SERVICE_ALL)
+//
+//   REF_DATE  = 06/04/2026 06:00 → prochain ROUTE_1 dir 0 = 07:00 = 60 min
+//   LATE_DATE = 06/04/2026 23:00 → tous les départs sont passés
+
+describe('getNextDepartureMins', () => {
+  it('retourne les minutes avant le prochain départ (STOP_A, ROUTE_1, dir 0 à REF_DATE)', () => {
+    const mins = getNextDepartureMins('STOP_A', 'ROUTE_1', 0, REF_DATE);
+    expect(mins).not.toBeNull();
+    expect(typeof mins).toBe('number');
+    expect(mins).toBeGreaterThanOrEqual(0);
+  });
+
+  it('retourne 60 min quand le prochain bus est à 07:00 et l\'heure est 06:00', () => {
+    const mins = getNextDepartureMins('STOP_A', 'ROUTE_1', 0, REF_DATE);
+    expect(mins).toBe(60);
+  });
+
+  it('retourne le minimum parmi plusieurs départs futurs (07:00 avant 08:00)', () => {
+    // À REF_DATE (06:00) deux voyages : TRIP_1A 07:00 (60 min) et TRIP_1B 08:00 (120 min)
+    const mins = getNextDepartureMins('STOP_A', 'ROUTE_1', 0, REF_DATE);
+    expect(mins).toBe(60); // doit retourner 60, pas 120
+  });
+
+  it('accepte directionId en string (insensible au type)', () => {
+    expect(getNextDepartureMins('STOP_A', 'ROUTE_1', '0', REF_DATE)).toBe(60);
+  });
+
+  it('retourne null quand tous les départs sont passés (LATE_DATE)', () => {
+    expect(getNextDepartureMins('STOP_A', 'ROUTE_1', 0, LATE_DATE)).toBeNull();
+  });
+
+  it('retourne null pour un stop inconnu', () => {
+    expect(getNextDepartureMins('STOP_INCONNU', 'ROUTE_1', 0, REF_DATE)).toBeNull();
+  });
+
+  it('retourne null pour une route inexistante', () => {
+    expect(getNextDepartureMins('STOP_A', 'ROUTE_INEXISTANTE', 0, REF_DATE)).toBeNull();
+  });
+
+  it('retourne null pour une direction inexistante', () => {
+    expect(getNextDepartureMins('STOP_A', 'ROUTE_1', 99, REF_DATE)).toBeNull();
+  });
+
+  it('ignore les trips dont le service est inactif (SERVICE_INACTIVE le 06/04)', () => {
+    // TRIP_INACTIVE (ROUTE_1 dir 0, SERVICE_INACTIVE) est à 11:00 mais SERVICE_INACTIVE
+    // n'est pas actif le 06/04 → ne doit pas influer sur le résultat
+    const mins = getNextDepartureMins('STOP_A', 'ROUTE_1', 0, REF_DATE);
+    expect(mins).toBe(60); // TRIP_1A à 07:00, pas TRIP_INACTIVE à 11:00
+  });
+
+  it('différencie les directions : dir 1 a un départ différent de dir 0', () => {
+    const dir0 = getNextDepartureMins('STOP_A', 'ROUTE_1', 0, REF_DATE);
+    const dir1 = getNextDepartureMins('STOP_A', 'ROUTE_1', 1, REF_DATE);
+    // dir 0 : 07:00 (60 min), dir 1 : TRIP_1C 09:30 (210 min)
+    expect(dir0).toBe(60);
+    expect(dir1).toBe(210);
   });
 });
