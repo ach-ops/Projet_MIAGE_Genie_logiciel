@@ -21,6 +21,7 @@ vi.mock('../../services/gtfs.service.js', () => ({
   getRouteInfo:          vi.fn(),
   getTransferStops:      vi.fn(() => new Set()),
   hasUpcomingDeparture:  vi.fn(() => true),
+  getNextDepartureMins:  vi.fn(() => 5),
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -46,6 +47,7 @@ import {
   getRouteInfo,
   getTransferStops,
   hasUpcomingDeparture,
+  getNextDepartureMins,
 } from '../../services/gtfs.service.js';
 
 // ─── Coordonnées de test (Nancy) ──────────────────────────────────────────────
@@ -112,6 +114,7 @@ function setupGtfsMocks() {
 
   getTransferStops.mockReturnValue(new Set());
   hasUpcomingDeparture.mockReturnValue(true);
+  getNextDepartureMins.mockReturnValue(5);
 }
 
 beforeEach(() => {
@@ -375,8 +378,9 @@ describe('findTransitOptions', () => {
     }
   });
 
-  it('retourne [] si hasUpcomingDeparture retourne toujours false', () => {
+  it('retourne [] si aucun départ à venir (getNextDepartureMins null, hasUpcomingDeparture false)', () => {
     hasUpcomingDeparture.mockReturnValue(false);
+    getNextDepartureMins.mockReturnValue(null);
 
     expect(findTransitOptions(FROM_LAT, FROM_LON, TO_LAT, TO_LON)).toEqual([]);
   });

@@ -265,6 +265,32 @@ export function hasUpcomingDeparture(stopId, routeId, directionId, date = new Da
   return false;
 }
 
+/**
+ * Retourne les minutes avant le prochain départ pour cette ligne/direction depuis cet arrêt,
+ * ou null si aucun départ n'est prévu aujourd'hui.
+ */
+export function getNextDepartureMins(stopId, routeId, directionId, date = new Date()) {
+  const now = date.getTime();
+  const activeServices = getActiveServiceIds(date);
+  const stopTimes = stopTimesByStop.get(stopId) || [];
+  let minFutureTs = null;
+
+  for (const st of stopTimes) {
+    const trip = trips.get(st.trip_id?.trim());
+    if (!trip) continue;
+    if (trip.route_id !== routeId) continue;
+    if (String(trip.direction_id) !== String(directionId)) continue;
+    if (!activeServices.has(trip.service_id)) continue;
+
+    const ts = gtfsTimeToTimestamp(st.departure_time || st.arrival_time, date, config.timeZone);
+    if (ts === null || ts < now) continue;
+    if (minFutureTs === null || ts < minFutureTs) minFutureTs = ts;
+  }
+
+  if (minFutureTs === null) return null;
+  return Math.round((minFutureTs - now) / 60000);
+}
+
 // ─── Accesseurs simples ───────────────────────────────────────────────────────
 
 export function getAllStops() {

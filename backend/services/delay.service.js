@@ -10,7 +10,7 @@
  */
 import { getTheoreticalArrivals, getAllTerminals, getRouteInfo } from './gtfs.service.js';
 import { getRealtimeArrivals } from './realtime.service.js';
-import { saveDelay } from './mongo.service.js';
+import { saveDelay, archiveDelays } from './mongo.service.js';
 import { logger } from '../utils/logger.js';
 
 // On ignore les retards > 30 min
@@ -18,6 +18,9 @@ import { logger } from '../utils/logger.js';
 const MAX_PLAUSIBLE_DELAY_MIN = 30;
 
 export async function computeDelays() {
+  // Archiver l'état courant avant d'écraser avec les nouvelles valeurs
+  await archiveDelays();
+
   // getAllTerminals() retourne le dernier arrêt de chaque ligne + direction.
   const terminals = getAllTerminals();
   logger.info(`Calcul des retards pour ${terminals.length} terminaux`);

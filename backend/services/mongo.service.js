@@ -24,6 +24,7 @@ const MAX_DELAY_ENTRIES = 288;
 
 let client = null;
 let collection = null;
+let oldDelaysCollection = null;
 
 /**
  * Ouvre la connexion MongoDB et prépare la collection "delays".
@@ -38,10 +39,13 @@ export async function connectDB() {
   await client.connect();
   const db = client.db(config.mongoDb);
   collection = db.collection('delays');
+  oldDelaysCollection = db.collection('old_delays');
 
   // Index pour accélérer les recherches et éviter les doublons par ligne + terminus
   await collection.createIndex({ routeId: 1, terminal: 1 }, { unique: true });
   await collection.createIndex({ routeId: 1 });
+  await oldDelaysCollection.createIndex({ routeId: 1 });
+  await oldDelaysCollection.createIndex({ computedAt: 1 });
 
   let safeUri;
   try {
@@ -52,6 +56,21 @@ export async function connectDB() {
     safeUri = config.mongoUri ? '(URI non parseable)' : '';
   }
   logger.info(`MongoDB connecté → ${safeUri} / ${config.mongoDb}`);
+}
+
+/**
+ * Archive un instantané de la collection "delays" dans "old_delays".
+ * Appelé en début de chaque calcul de retards pour conserver l'historique.
+ */
+export async function archiveDelays() {
+  if (!collection || !oldDelaysCollection) return;
+  const current = await collection.find({}).toArray();
+  if (!current.length) return;
+  const now = new Date();
+  // eslint-disable-next-line no-unused-vars
+  const docs = current.map(({ _id, ...doc }) => ({ ...doc, computedAt: now }));
+  await oldDelaysCollection.insertMany(docs);
+  logger.info(`${docs.length} documents archivés dans old_delays`);
 }
 
 /**
