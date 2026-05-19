@@ -18,6 +18,7 @@ import {
   getRouteInfo,
   getTransferStops,
   hasUpcomingDeparture,
+  getNextDepartureMins,
 } from './gtfs.service.js';
 import { logger } from '../utils/logger.js';
 
@@ -31,6 +32,7 @@ const MAX_OPTIONS          = 5;     // nombre max d'itinéraires bus retournés
 const BUS_TIME_PER_STOP    = 2;     // estimation : 2 min entre deux arrêts consécutifs
 const SAME_LOCATION_KM     = 0.05;  // seuil en-dessous duquel départ ≈ arrivée (50 m)
 const MAX_TRANSFER_WALK_KM = 0.35;  // max 350 m à pied pour une correspondance
+const MAX_WAIT_MINUTES     = 60;   // attente max avant le premier bus (2 h)
 const ADRESSE_API          = 'https://api-adresse.data.gouv.fr/search/';
 
 /**
@@ -150,7 +152,7 @@ function makeWalkLeg(from, to, rawDistKm, durationMin) {
   };
 }
 
-function makeBusLeg(routeId, shortName, routeInfo, direction, fromStop, toStop, stopCount) {
+function makeBusLeg(routeId, shortName, routeInfo, direction, fromStop, toStop, stopCount, waitMin = 0) {
   return {
     type: 'bus',
     route: {
@@ -162,6 +164,7 @@ function makeBusLeg(routeId, shortName, routeInfo, direction, fromStop, toStop, 
     from:       { stopId: fromStop.stopId, stopName: fromStop.stopName },
     to:         { stopId: toStop.stopId,   stopName: toStop.stopName   },
     stopCount,
+    waitMin,
     durationMin: stopCount * BUS_TIME_PER_STOP,
   };
 }
@@ -232,6 +235,15 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
     return _departureCache.get(key);
   };
 
+  const _nextDepartureMinsCache = new Map();
+  const cachedNextDepartureMins = (stopId, routeId, directionId) => {
+    const key = `${stopId}:${routeId}:${directionId}`;
+    if (!_nextDepartureMinsCache.has(key)) {
+      _nextDepartureMinsCache.set(key, getNextDepartureMins(stopId, routeId, directionId));
+    }
+    return _nextDepartureMinsCache.get(key);
+  };
+
   // ── Phase A : pré-calcul côté destination ─────────────────────────────────
   //
   // destBoardable : stopId → tableau d'options "monter ici → arriver à dest"
@@ -249,6 +261,7 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
       const shortName = routeInfo?.routeName ?? route.route_short_name?.trim();
 
       for (const direction of getDirectionsForRoute(routeId)) {
+        if (!cachedHasUpcomingDeparture(toStop.stopId, routeId, direction.directionId)) continue;
         const stops = cachedRouteStops(routeId, direction.directionId);
         const toIdx = stops.findIndex(s => s.stopId === toStop.stopId);
         if (toIdx === -1) continue;
@@ -327,7 +340,8 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
       const shortName = routeInfo?.routeName ?? route.route_short_name?.trim();
 
       for (const direction of getDirectionsForRoute(routeId)) {
-        if (!cachedHasUpcomingDeparture(fromStop.stopId, routeId, direction.directionId)) continue;
+        const waitMin = cachedNextDepartureMins(fromStop.stopId, routeId, direction.directionId);
+        if (waitMin === null || waitMin > MAX_WAIT_MINUTES) continue;
 
         const stopIdx = cachedRouteStopIndex(routeId, direction.directionId);
         const fromIdx = stopIdx.get(fromStop.stopId) ?? -1;
@@ -342,14 +356,14 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
           const busTimeMin  = stopCount * BUS_TIME_PER_STOP;
 
           addOpt(`${shortName}:${direction.directionId}`, {
-            totalDurationMin: walkToMin + busTimeMin + walkFromMin,
+            totalDurationMin: walkToMin + waitMin + busTimeMin + walkFromMin,
             legs: [
               makeWalkLeg(
                 { lat: fromLat, lon: fromLon, name: 'Départ' },
                 { stopId: fromStop.stopId, stopName: fromStop.stopName, lat: fromStop.lat, lon: fromStop.lon },
                 fromStop.distanceKm, walkToMin,
               ),
-              makeBusLeg(routeId, shortName, routeInfo, direction, fromStop, toStop, stopCount),
+              makeBusLeg(routeId, shortName, routeInfo, direction, fromStop, toStop, stopCount, waitMin),
               makeWalkLeg(
                 { stopId: toStop.stopId, stopName: toStop.stopName, lat: toStop.lat, lon: toStop.lon },
                 { lat: toLat, lon: toLon, name: 'Arrivée' },
@@ -362,6 +376,17 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
     }
   }
 
+  // Cache nearbyDest par stopId — évite O(destIndex) × nb_arrêts × nb_lignes
+  const _nearbyDestCache = new Map();
+  const cachedNearbyDest = (stopId) => {
+    if (!_nearbyDestCache.has(stopId)) {
+      const raw = stopById.get(stopId);
+      if (!raw) { _nearbyDestCache.set(stopId, []); return []; }
+      _nearbyDestCache.set(stopId, nearbyDest(parseFloat(raw.stop_lat), parseFloat(raw.stop_lon), stopId));
+    }
+    return _nearbyDestCache.get(stopId);
+  };
+
   // ── 1 correspondance ──────────────────────────────────────────────────────
   for (const fromStop of fromStops) {
     const walkToMin = walkingTimeMin(fromStop.distanceKm * WALK_FACTOR);
@@ -372,7 +397,8 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
       const shortName1 = routeInfo1?.routeName ?? route1.route_short_name?.trim();
 
       for (const dir1 of getDirectionsForRoute(routeId1)) {
-        if (!cachedHasUpcomingDeparture(fromStop.stopId, routeId1, dir1.directionId)) continue;
+        const waitMin1 = cachedNextDepartureMins(fromStop.stopId, routeId1, dir1.directionId);
+        if (waitMin1 === null || waitMin1 > MAX_WAIT_MINUTES) continue;
 
         const stops1   = cachedRouteStops(routeId1, dir1.directionId);
         const fromIdx1 = cachedRouteStopIndex(routeId1, dir1.directionId).get(fromStop.stopId) ?? -1;
@@ -386,7 +412,7 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
           const alight1Lat  = parseFloat(raw1.stop_lat);
           const alight1Lon  = parseFloat(raw1.stop_lon);
 
-          for (const db of nearbyDest(alight1Lat, alight1Lon, alight1.stopId)) {
+          for (const db of cachedNearbyDest(alight1.stopId)) {
             const tDist = haversineKm(alight1Lat, alight1Lon, db.lat, db.lon);
             const tMin  = walkingTimeMin(tDist * WALK_FACTOR);
 
@@ -394,7 +420,7 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
               if (d2.shortName === shortName1) continue;
               if (!cachedHasUpcomingDeparture(db.stopId, d2.routeId, d2.direction.directionId)) continue;
 
-              const total    = walkToMin + busTime1Min + tMin + d2.busTimeMin + d2.walkFromMin;
+              const total    = walkToMin + waitMin1 + busTime1Min + tMin + d2.busTimeMin + d2.walkFromMin;
               const comboKey = `${shortName1}:${dir1.directionId}→${d2.shortName}:${d2.direction.directionId}`;
 
               addOpt(comboKey, {
@@ -406,7 +432,7 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
                     fromStop.distanceKm, walkToMin,
                   ),
                   makeBusLeg(routeId1, shortName1, routeInfo1, dir1, fromStop,
-                    { stopId: alight1.stopId, stopName: alight1.stopName }, ti - fromIdx1),
+                    { stopId: alight1.stopId, stopName: alight1.stopName }, ti - fromIdx1, waitMin1),
                   // Marche de correspondance (seulement si ≠ 0)
                   ...(tMin > 0 ? [makeWalkLeg(
                     { stopId: alight1.stopId, stopName: alight1.stopName, lat: alight1Lat, lon: alight1Lon },
@@ -430,17 +456,30 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
   }
 
   // ── 2 correspondances ─────────────────────────────────────────────────────
-  // Seulement si moins de MAX_OPTIONS trouvés avec 0 et 1 correspondance,
-  // pour éviter de surcharger les résultats de trajets trop complexes.
-  if (bestByCombo.size < MAX_OPTIONS) {
+  // Seulement si aucune option trouvée en 0 ou 1 correspondance.
+  if (bestByCombo.size === 0) {
 
     // Index spatial de TOUS les arrêts du réseau (pour trouver un 2e bus intermédiaire)
     const allStopsIndex = allStops.map(s => ({
       stopId: s.stop_id,
       stopName: s.stop_name,
-      lat: parseFloat(s.stop_lat),
-      lon: parseFloat(s.stop_lon),
+      lat: Number.parseFloat(s.stop_lat),
+      lon: Number.parseFloat(s.stop_lon),
     }));
+
+    const _nearby2Cache = new Map();
+    const cachedNearby2 = (stopId) => {
+      if (!_nearby2Cache.has(stopId)) {
+        const raw = stopById.get(stopId);
+        if (!raw) { _nearby2Cache.set(stopId, []); return []; }
+        const lat = Number.parseFloat(raw.stop_lat);
+        const lon = Number.parseFloat(raw.stop_lon);
+        _nearby2Cache.set(stopId, allStopsIndex.filter(
+          s => haversineKm(lat, lon, s.lat, s.lon) <= MAX_TRANSFER_WALK_KM,
+        ));
+      }
+      return _nearby2Cache.get(stopId);
+    };
 
     for (const fromStop of fromStops) {
       const walkToMin = walkingTimeMin(fromStop.distanceKm * WALK_FACTOR);
@@ -451,7 +490,8 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
         const shortName1 = routeInfo1?.routeName ?? route1.route_short_name?.trim();
 
         for (const dir1 of getDirectionsForRoute(routeId1)) {
-          if (!cachedHasUpcomingDeparture(fromStop.stopId, routeId1, dir1.directionId)) continue;
+          const waitMin2 = cachedNextDepartureMins(fromStop.stopId, routeId1, dir1.directionId);
+          if (waitMin2 === null || waitMin2 > MAX_WAIT_MINUTES) continue;
 
           const stops1   = cachedRouteStops(routeId1, dir1.directionId);
           const fromIdx1 = cachedRouteStopIndex(routeId1, dir1.directionId).get(fromStop.stopId) ?? -1;
@@ -466,11 +506,7 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
             const alight1Lat  = parseFloat(raw1.stop_lat);
             const alight1Lon  = parseFloat(raw1.stop_lon);
 
-            const nearby2 = allStopsIndex.filter(
-              s => haversineKm(alight1Lat, alight1Lon, s.lat, s.lon) <= MAX_TRANSFER_WALK_KM,
-            );
-
-            for (const board2Stop of nearby2) {
+            for (const board2Stop of cachedNearby2(alight1.stopId)) {
               const t1Dist = haversineKm(alight1Lat, alight1Lon, board2Stop.lat, board2Stop.lon);
               const t1Min  = walkingTimeMin(t1Dist * WALK_FACTOR);
 
@@ -496,7 +532,7 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
                     const alight2Lat  = parseFloat(raw2.stop_lat);
                     const alight2Lon  = parseFloat(raw2.stop_lon);
 
-                    for (const db of nearbyDest(alight2Lat, alight2Lon, alight2.stopId)) {
+                    for (const db of cachedNearbyDest(alight2.stopId)) {
                       const t2Dist = haversineKm(alight2Lat, alight2Lon, db.lat, db.lon);
                       const t2Min  = walkingTimeMin(t2Dist * WALK_FACTOR);
 
@@ -504,7 +540,7 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
                         if (d3.shortName === shortName1 || d3.shortName === shortName2) continue;
                         if (!cachedHasUpcomingDeparture(db.stopId, d3.routeId, d3.direction.directionId)) continue;
 
-                        const total = walkToMin + busTime1Min + t1Min
+                        const total = walkToMin + waitMin2 + busTime1Min + t1Min
                           + busTime2Min + t2Min + d3.busTimeMin + d3.walkFromMin;
 
                         if (total > bestDuration * 2) continue;
@@ -522,7 +558,7 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
                               fromStop.distanceKm, walkToMin,
                             ),
                             makeBusLeg(routeId1, shortName1, routeInfo1, dir1, fromStop,
-                              { stopId: alight1.stopId, stopName: alight1.stopName }, ti - fromIdx1),
+                              { stopId: alight1.stopId, stopName: alight1.stopName }, ti - fromIdx1, waitMin2),
                             ...(t1Min > 0 ? [makeWalkLeg(
                               { stopId: alight1.stopId, stopName: alight1.stopName, lat: alight1Lat, lon: alight1Lon },
                               { stopId: board2Stop.stopId, stopName: board2Stop.stopName, lat: board2Stop.lat, lon: board2Stop.lon },
