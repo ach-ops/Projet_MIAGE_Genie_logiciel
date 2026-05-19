@@ -59,16 +59,21 @@ function loop(ts: number) {
   raf = requestAnimationFrame(loop)
 }
 
+let delayTimer: ReturnType<typeof setInterval> | null = null
+
 onMounted(async () => {
   await fetchDelays()
   if (trackRef.value) {
     pos = -(trackRef.value.scrollWidth / 3)
   }
   raf = requestAnimationFrame(loop)
+  // Rafraîchit les retards (toutes les 15 min)
+  delayTimer = setInterval(fetchDelays, 15 * 60_000)
 })
 
 onUnmounted(() => {
   if (raf !== null) cancelAnimationFrame(raf)
+  if (delayTimer !== null) clearInterval(delayTimer)
 })
 </script>
 

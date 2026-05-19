@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { MapPin, Bus, Navigation, AlertCircle } from 'lucide-vue-next'
 import AppHeader from './AppHeader.vue'
 import type { HeaderTab, Stop } from '@/types/types'
@@ -58,6 +58,21 @@ async function fetchAverageDelay() {
 }
 
 fetchAverageDelay()
+
+let arrivalsTimer: ReturnType<typeof setInterval> | null = null
+let delayTimer: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  // Arrivées temps réel : refresh toutes les 30s
+  arrivalsTimer = setInterval(() => refreshArrivals(), 30_000)
+  // Retards moyens : aligné sur le cron (toutes les 15 min)
+  delayTimer = setInterval(() => fetchAverageDelay(), 15 * 60_000)
+})
+
+onUnmounted(() => {
+  if (arrivalsTimer !== null) clearInterval(arrivalsTimer)
+  if (delayTimer !== null) clearInterval(delayTimer)
+})
 
 // ── Navigation entre onglets ───────────────────────────────────────────────
 

@@ -21,6 +21,10 @@ import {
   getDirectionName,
   getRouteShape,
   getAllTerminals,
+  getActiveServiceIds,
+  hasUpcomingDeparture,
+  getTransferStops,
+  debugStop,
 } from '../../services/gtfs.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -156,5 +160,121 @@ describe('getAllTerminals', () => {
     const terminals = getAllTerminals();
     const t = terminals.find(t => t.stopId === 'STOP_C');
     expect(t.name).toBe('Arrêt C');
+  });
+});
+
+// ─── getActiveServiceIds — cache hit ─────────────────────────────────────────
+
+const REF_DATE  = new Date(2026, 3, 6, 6, 0, 0);
+const LATE_DATE = new Date(2026, 3, 6, 23, 0, 0);
+
+describe('getActiveServiceIds — cache', () => {
+  it('retourne la même référence au 2e appel avec la même date (cache hit)', () => {
+    const r1 = getActiveServiceIds(REF_DATE);
+    const r2 = getActiveServiceIds(REF_DATE);
+    expect(r2).toBe(r1);
+  });
+
+  it('applique exception_type=1 (ajout) pour le 7 avril 2026', () => {
+    // calendar_dates.txt : SERVICE_INACTIVE ajouté le 07/04/2026
+    const date = new Date(2026, 3, 7, 6, 0, 0);
+    const active = getActiveServiceIds(date);
+    expect(active.has('SERVICE_INACTIVE')).toBe(true);
+  });
+
+  it('applique exception_type=2 (suppression) pour le 7 avril 2026', () => {
+    // calendar_dates.txt : SERVICE_ALL supprimé le 07/04/2026
+    const date = new Date(2026, 3, 7, 6, 0, 0);
+    const active = getActiveServiceIds(date);
+    expect(active.has('SERVICE_ALL')).toBe(false);
+  });
+});
+
+describe('getTransferStops — avec transfers.txt', () => {
+  it('retourne les arrêts en correspondance avec STOP_A', () => {
+    const result = getTransferStops('STOP_A');
+    expect(result).toBeInstanceOf(Set);
+    expect(result.has('STOP_B')).toBe(true);
+  });
+
+  it('ignore la correspondance STOP_A → STOP_A (from === to)', () => {
+    const result = getTransferStops('STOP_A');
+    expect(result.has('STOP_A')).toBe(false);
+  });
+
+  it('retourne les correspondances dans les deux sens', () => {
+    const fromB = getTransferStops('STOP_B');
+    expect(fromB.has('STOP_A')).toBe(true);
+  });
+});
+
+// ─── hasUpcomingDeparture ─────────────────────────────────────────────────────
+
+describe('hasUpcomingDeparture', () => {
+  it('retourne true quand un départ futur existe', () => {
+    expect(hasUpcomingDeparture('STOP_A', 'ROUTE_1', 0, REF_DATE)).toBe(true);
+  });
+
+  it('retourne true avec directionId en string', () => {
+    expect(hasUpcomingDeparture('STOP_A', 'ROUTE_1', '0', REF_DATE)).toBe(true);
+  });
+
+  it('retourne false quand tous les départs sont passés', () => {
+    expect(hasUpcomingDeparture('STOP_A', 'ROUTE_1', 0, LATE_DATE)).toBe(false);
+  });
+
+  it('retourne false pour une direction inexistante', () => {
+    expect(hasUpcomingDeparture('STOP_A', 'ROUTE_1', 99, REF_DATE)).toBe(false);
+  });
+
+  it('retourne false pour un stop inconnu', () => {
+    expect(hasUpcomingDeparture('STOP_INCONNU', 'ROUTE_1', 0, REF_DATE)).toBe(false);
+  });
+
+  it('retourne false si la route ne correspond pas', () => {
+    expect(hasUpcomingDeparture('STOP_A', 'ROUTE_INEXISTANTE', 0, REF_DATE)).toBe(false);
+  });
+});
+
+// ─── getTransferStops ─────────────────────────────────────────────────────────
+
+describe('getTransferStops', () => {
+  it('retourne un Set vide pour un stop inconnu', () => {
+    expect(getTransferStops('STOP_INCONNU').size).toBe(0);
+  });
+
+  it('gère un stopId undefined sans erreur', () => {
+    expect(getTransferStops(undefined)).toBeInstanceOf(Set);
+  });
+});
+
+// ─── debugStop ────────────────────────────────────────────────────────────────
+
+describe('debugStop', () => {
+  it('retourne exists: false pour un stop inconnu', () => {
+    expect(debugStop('STOP_INCONNU')).toEqual({ exists: false, stopId: 'STOP_INCONNU' });
+  });
+
+  it('retourne les informations complètes pour STOP_A', () => {
+    const result = debugStop('STOP_A');
+    expect(result.exists).toBe(true);
+    expect(result.stopId).toBe('STOP_A');
+    expect(result.stopName).toBe('Arrêt A');
+    expect(result.totalStopTimes).toBeGreaterThan(0);
+    expect(Array.isArray(result.routes)).toBe(true);
+  });
+
+  it('inclut les routes desservant STOP_A', () => {
+    const result = debugStop('STOP_A');
+    expect(result.routes.map(r => r.routeId)).toContain('ROUTE_1');
+  });
+
+  it('inclut activeServiceCount, today et nextPassageInMin', () => {
+    const result = debugStop('STOP_A');
+    expect(typeof result.activeServiceCount).toBe('number');
+    expect(result.today).toMatch(/^\d{8}$/);
+    for (const route of result.routes) {
+      expect(route).toHaveProperty('nextPassageInMin');
+    }
   });
 });

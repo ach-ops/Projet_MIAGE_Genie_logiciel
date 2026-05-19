@@ -1,1 +1,3 @@
 service_id,date,exception_type
+SERVICE_INACTIVE,20260407,1
+SERVICE_ALL,20260407,2
