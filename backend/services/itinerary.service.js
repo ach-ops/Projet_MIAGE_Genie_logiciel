@@ -203,6 +203,35 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
     return _routeStopsCache.get(key);
   };
 
+  // Index Map stopId→index par ligne/direction pour éviter les findIndex
+  const _routeStopIndexCache = new Map();
+  const cachedRouteStopIndex = (routeId, directionId) => {
+    const key = `${routeId}:${directionId}`;
+    if (!_routeStopIndexCache.has(key)) {
+      const stops = cachedRouteStops(routeId, directionId);
+      _routeStopIndexCache.set(key, new Map(stops.map((s, i) => [s.stopId, i])));
+    }
+    return _routeStopIndexCache.get(key);
+  };
+
+  // getRoutesByStop — itère les stop_times à chaque appel sinon
+  const _routesByStopCache = new Map();
+  const cachedRoutesByStop = (stopId) => {
+    if (!_routesByStopCache.has(stopId)) {
+      _routesByStopCache.set(stopId, getRoutesByStop(stopId));
+    }
+    return _routesByStopCache.get(stopId);
+  };
+
+  const _departureCache = new Map();
+  const cachedHasUpcomingDeparture = (stopId, routeId, directionId) => {
+    const key = `${stopId}:${routeId}:${directionId}`;
+    if (!_departureCache.has(key)) {
+      _departureCache.set(key, hasUpcomingDeparture(stopId, routeId, directionId));
+    }
+    return _departureCache.get(key);
+  };
+
   // ── Phase A : pré-calcul côté destination ─────────────────────────────────
   //
   // destBoardable : stopId → tableau d'options "monter ici → arriver à dest"
@@ -257,9 +286,13 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
 
   // ── Collecteur d'options ───────────────────────────────────────────────────
   const bestByCombo = new Map();
+  let bestDuration = Infinity;
   function addOpt(comboKey, opt) {
     const ex = bestByCombo.get(comboKey);
-    if (!ex || opt.totalDurationMin < ex.totalDurationMin) bestByCombo.set(comboKey, opt);
+    if (!ex || opt.totalDurationMin < ex.totalDurationMin) {
+      bestByCombo.set(comboKey, opt);
+      if (opt.totalDurationMin < bestDuration) bestDuration = opt.totalDurationMin;
+    }
   }
 
   // Index des stops de destBoardable par stopId pour visualisation rapide
@@ -288,20 +321,20 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
   for (const fromStop of fromStops) {
     const walkToMin = walkingTimeMin(fromStop.distanceKm * WALK_FACTOR);
 
-    for (const route of getRoutesByStop(fromStop.stopId)) {
+    for (const route of cachedRoutesByStop(fromStop.stopId)) {
       const routeId   = route.route_id?.trim();
       const routeInfo = getRouteInfo(routeId);
       const shortName = routeInfo?.routeName ?? route.route_short_name?.trim();
 
       for (const direction of getDirectionsForRoute(routeId)) {
-        if (!hasUpcomingDeparture(fromStop.stopId, routeId, direction.directionId)) continue;
+        if (!cachedHasUpcomingDeparture(fromStop.stopId, routeId, direction.directionId)) continue;
 
-        const stops   = cachedRouteStops(routeId, direction.directionId);
-        const fromIdx = stops.findIndex(s => s.stopId === fromStop.stopId);
+        const stopIdx = cachedRouteStopIndex(routeId, direction.directionId);
+        const fromIdx = stopIdx.get(fromStop.stopId) ?? -1;
         if (fromIdx === -1) continue;
 
         for (const toStop of toStops) {
-          const toIdx = stops.findIndex(s => s.stopId === toStop.stopId);
+          const toIdx = stopIdx.get(toStop.stopId) ?? -1;
           if (toIdx === -1 || toIdx <= fromIdx) continue;
 
           const walkFromMin = walkingTimeMin(toStop.distanceKm * WALK_FACTOR);
@@ -333,16 +366,16 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
   for (const fromStop of fromStops) {
     const walkToMin = walkingTimeMin(fromStop.distanceKm * WALK_FACTOR);
 
-    for (const route1 of getRoutesByStop(fromStop.stopId)) {
+    for (const route1 of cachedRoutesByStop(fromStop.stopId)) {
       const routeId1   = route1.route_id?.trim();
       const routeInfo1 = getRouteInfo(routeId1);
       const shortName1 = routeInfo1?.routeName ?? route1.route_short_name?.trim();
 
       for (const dir1 of getDirectionsForRoute(routeId1)) {
-        if (!hasUpcomingDeparture(fromStop.stopId, routeId1, dir1.directionId)) continue;
+        if (!cachedHasUpcomingDeparture(fromStop.stopId, routeId1, dir1.directionId)) continue;
 
         const stops1   = cachedRouteStops(routeId1, dir1.directionId);
-        const fromIdx1 = stops1.findIndex(s => s.stopId === fromStop.stopId);
+        const fromIdx1 = cachedRouteStopIndex(routeId1, dir1.directionId).get(fromStop.stopId) ?? -1;
         if (fromIdx1 === -1) continue;
 
         for (let ti = fromIdx1 + 1; ti < stops1.length; ti++) {
@@ -358,8 +391,8 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
             const tMin  = walkingTimeMin(tDist * WALK_FACTOR);
 
             for (const d2 of db.entries) {
-              if (d2.shortName === shortName1) continue; // même ligne = pas une vraie correspondance
-              if (!hasUpcomingDeparture(db.stopId, d2.routeId, d2.direction.directionId)) continue;
+              if (d2.shortName === shortName1) continue;
+              if (!cachedHasUpcomingDeparture(db.stopId, d2.routeId, d2.direction.directionId)) continue;
 
               const total    = walkToMin + busTime1Min + tMin + d2.busTimeMin + d2.walkFromMin;
               const comboKey = `${shortName1}:${dir1.directionId}→${d2.shortName}:${d2.direction.directionId}`;
@@ -412,19 +445,18 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
     for (const fromStop of fromStops) {
       const walkToMin = walkingTimeMin(fromStop.distanceKm * WALK_FACTOR);
 
-      for (const route1 of getRoutesByStop(fromStop.stopId)) {
+      for (const route1 of cachedRoutesByStop(fromStop.stopId)) {
         const routeId1   = route1.route_id?.trim();
         const routeInfo1 = getRouteInfo(routeId1);
         const shortName1 = routeInfo1?.routeName ?? route1.route_short_name?.trim();
 
         for (const dir1 of getDirectionsForRoute(routeId1)) {
-          if (!hasUpcomingDeparture(fromStop.stopId, routeId1, dir1.directionId)) continue;
+          if (!cachedHasUpcomingDeparture(fromStop.stopId, routeId1, dir1.directionId)) continue;
 
           const stops1   = cachedRouteStops(routeId1, dir1.directionId);
-          const fromIdx1 = stops1.findIndex(s => s.stopId === fromStop.stopId);
+          const fromIdx1 = cachedRouteStopIndex(routeId1, dir1.directionId).get(fromStop.stopId) ?? -1;
           if (fromIdx1 === -1) continue;
 
-          // On limite l'exploration aux 15 premiers arrêts pour la perf
           const limit1 = Math.min(stops1.length, fromIdx1 + 16);
           for (let ti = fromIdx1 + 1; ti < limit1; ti++) {
             const alight1     = stops1[ti];
@@ -434,7 +466,6 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
             const alight1Lat  = parseFloat(raw1.stop_lat);
             const alight1Lon  = parseFloat(raw1.stop_lon);
 
-            // Arrêts proches pour le 2e bus (arrêts quelconques, pas forcément dans destBoardable)
             const nearby2 = allStopsIndex.filter(
               s => haversineKm(alight1Lat, alight1Lon, s.lat, s.lon) <= MAX_TRANSFER_WALK_KM,
             );
@@ -443,20 +474,19 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
               const t1Dist = haversineKm(alight1Lat, alight1Lon, board2Stop.lat, board2Stop.lon);
               const t1Min  = walkingTimeMin(t1Dist * WALK_FACTOR);
 
-              for (const route2 of getRoutesByStop(board2Stop.stopId)) {
+              for (const route2 of cachedRoutesByStop(board2Stop.stopId)) {
                 const routeId2   = route2.route_id?.trim();
                 const routeInfo2 = getRouteInfo(routeId2);
                 const shortName2 = routeInfo2?.routeName ?? route2.route_short_name?.trim();
                 if (shortName2 === shortName1) continue;
 
                 for (const dir2 of getDirectionsForRoute(routeId2)) {
-                  if (!hasUpcomingDeparture(board2Stop.stopId, routeId2, dir2.directionId)) continue;
+                  if (!cachedHasUpcomingDeparture(board2Stop.stopId, routeId2, dir2.directionId)) continue;
 
                   const stops2    = cachedRouteStops(routeId2, dir2.directionId);
-                  const board2Idx = stops2.findIndex(s => s.stopId === board2Stop.stopId);
+                  const board2Idx = cachedRouteStopIndex(routeId2, dir2.directionId).get(board2Stop.stopId) ?? -1;
                   if (board2Idx === -1) continue;
 
-                  // On limite aussi l'exploration du 2e bus
                   const limit2 = Math.min(stops2.length, board2Idx + 16);
                   for (let tj = board2Idx + 1; tj < limit2; tj++) {
                     const alight2     = stops2[tj];
@@ -466,23 +496,18 @@ export function findTransitOptions(fromLat, fromLon, toLat, toLon) {
                     const alight2Lat  = parseFloat(raw2.stop_lat);
                     const alight2Lon  = parseFloat(raw2.stop_lon);
 
-                    // Depuis alight2, cherche un 3e bus vers destination
                     for (const db of nearbyDest(alight2Lat, alight2Lon, alight2.stopId)) {
                       const t2Dist = haversineKm(alight2Lat, alight2Lon, db.lat, db.lon);
                       const t2Min  = walkingTimeMin(t2Dist * WALK_FACTOR);
 
                       for (const d3 of db.entries) {
                         if (d3.shortName === shortName1 || d3.shortName === shortName2) continue;
-                        if (!hasUpcomingDeparture(db.stopId, d3.routeId, d3.direction.directionId)) continue;
+                        if (!cachedHasUpcomingDeparture(db.stopId, d3.routeId, d3.direction.directionId)) continue;
 
                         const total = walkToMin + busTime1Min + t1Min
                           + busTime2Min + t2Min + d3.busTimeMin + d3.walkFromMin;
 
-                        // Éviter les itinéraires longs par rapport aux options déjà trouvées
-                        const bestSoFar = bestByCombo.size > 0
-                          ? Math.min(...Array.from(bestByCombo.values()).map(o => o.totalDurationMin))
-                          : Infinity;
-                        if (total > bestSoFar * 2) continue;
+                        if (total > bestDuration * 2) continue;
 
                         const comboKey = `${shortName1}:${dir1.directionId}`
                           + `→${shortName2}:${dir2.directionId}`

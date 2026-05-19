@@ -1,11 +1,11 @@
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 
 # dumb-init gère correctement SIGTERM
 RUN apk add --no-cache dumb-init
