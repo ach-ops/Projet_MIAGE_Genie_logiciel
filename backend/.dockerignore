@@ -10,6 +10,8 @@ vitest.config.js
 .husky
 .oxlintrc*
 .eslintrc*
-README.md
+*.md
+.git
+.github
 Dockerfile
 .dockerignore
