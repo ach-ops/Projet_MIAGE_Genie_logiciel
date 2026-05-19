@@ -276,4 +276,13 @@ describe('mongo.service', () => {
       expect(mockInsertMany).not.toHaveBeenCalled();
     });
   });
+
+  describe('archiveDelays — MongoDB indisponible (collection null)', () => {
+    it('ne crash pas et n\'appelle pas insertMany quand connectDB n\'a pas été appelé', async () => {
+      vi.resetModules();
+      const { archiveDelays: archiveDelaysFresh } = await import('../../services/mongo.service.js');
+      await expect(archiveDelaysFresh()).resolves.toBeUndefined();
+      expect(mockInsertMany).not.toHaveBeenCalled();
+    });
+  });
 });
