@@ -15,16 +15,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mock MongoDB ───────────────────────────────────────────────────────────────
 
-const { mockUpdateOne, mockFind, mockToArray, mockAggregate, mockCreateIndex, mockCollection, mockDb, mockConnect } = vi.hoisted(() => {
+const { mockUpdateOne, mockInsertMany, mockFind, mockToArray, mockAggregate, mockCreateIndex, mockCollection, mockDb, mockConnect } = vi.hoisted(() => {
   const mockUpdateOne   = vi.fn();
+  const mockInsertMany  = vi.fn().mockResolvedValue({ insertedCount: 1 });
   const mockToArray     = vi.fn();
   const mockFind        = vi.fn().mockReturnValue({ toArray: mockToArray });
   const mockAggregate   = vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
   const mockCreateIndex = vi.fn().mockResolvedValue('index_created');
-  const mockCollection  = vi.fn().mockReturnValue({ updateOne: mockUpdateOne, find: mockFind, createIndex: mockCreateIndex, aggregate: mockAggregate });
+  const mockCollection  = vi.fn().mockReturnValue({ updateOne: mockUpdateOne, insertMany: mockInsertMany, find: mockFind, createIndex: mockCreateIndex, aggregate: mockAggregate });
   const mockDb          = vi.fn().mockReturnValue({ collection: mockCollection });
   const mockConnect     = vi.fn().mockResolvedValue(undefined);
-  return { mockUpdateOne, mockFind, mockToArray, mockAggregate, mockCreateIndex, mockCollection, mockDb, mockConnect };
+  return { mockUpdateOne, mockInsertMany, mockFind, mockToArray, mockAggregate, mockCreateIndex, mockCollection, mockDb, mockConnect };
 });
 
 vi.mock('mongodb', () => ({
@@ -40,18 +41,19 @@ vi.mock('../../utils/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
 }));
 
-import { connectDB, saveDelay, getDelays, getDelaysByRoute, getAverageDelay } from '../../services/mongo.service.js';
+import { connectDB, saveDelay, archiveDelays, getDelays, getDelaysByRoute, getAverageDelay } from '../../services/mongo.service.js';
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('mongo.service', () => {
 
   describe('connectDB', () => {
-    it('appelle client.connect() puis sélectionne la collection "delays"', async () => {
+    it('appelle client.connect() puis sélectionne les collections "delays" et "old_delays"', async () => {
       await connectDB();
 
       expect(mockConnect).toHaveBeenCalledOnce();
       expect(mockCollection).toHaveBeenCalledWith('delays');
+      expect(mockCollection).toHaveBeenCalledWith('old_delays');
     });
   });
 
@@ -60,7 +62,7 @@ describe('mongo.service', () => {
       vi.clearAllMocks();
       mockFind.mockReturnValue({ toArray: mockToArray });
       mockCreateIndex.mockResolvedValue('index_created');
-      mockCollection.mockReturnValue({ updateOne: mockUpdateOne, find: mockFind, createIndex: mockCreateIndex });
+      mockCollection.mockReturnValue({ updateOne: mockUpdateOne, insertMany: mockInsertMany, find: mockFind, createIndex: mockCreateIndex, aggregate: mockAggregate });
       mockDb.mockReturnValue({ collection: mockCollection });
       mockConnect.mockResolvedValue(undefined);
       await connectDB();
@@ -125,7 +127,7 @@ describe('mongo.service', () => {
       mockFind.mockReturnValue({ toArray: mockToArray });
       mockAggregate.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
       mockCreateIndex.mockResolvedValue('index_created');
-      mockCollection.mockReturnValue({ updateOne: mockUpdateOne, find: mockFind, createIndex: mockCreateIndex, aggregate: mockAggregate });
+      mockCollection.mockReturnValue({ updateOne: mockUpdateOne, insertMany: mockInsertMany, find: mockFind, createIndex: mockCreateIndex, aggregate: mockAggregate });
       mockDb.mockReturnValue({ collection: mockCollection });
       mockConnect.mockResolvedValue(undefined);
       await connectDB();
@@ -157,7 +159,7 @@ describe('mongo.service', () => {
       vi.clearAllMocks();
       mockFind.mockReturnValue({ toArray: mockToArray });
       mockCreateIndex.mockResolvedValue('index_created');
-      mockCollection.mockReturnValue({ updateOne: mockUpdateOne, find: mockFind, createIndex: mockCreateIndex, aggregate: mockAggregate });
+      mockCollection.mockReturnValue({ updateOne: mockUpdateOne, insertMany: mockInsertMany, find: mockFind, createIndex: mockCreateIndex, aggregate: mockAggregate });
       mockDb.mockReturnValue({ collection: mockCollection });
       mockConnect.mockResolvedValue(undefined);
       await connectDB();
@@ -204,7 +206,7 @@ describe('mongo.service', () => {
       vi.clearAllMocks();
       mockFind.mockReturnValue({ toArray: mockToArray });
       mockCreateIndex.mockResolvedValue('index_created');
-      mockCollection.mockReturnValue({ updateOne: mockUpdateOne, find: mockFind, createIndex: mockCreateIndex, aggregate: mockAggregate });
+      mockCollection.mockReturnValue({ updateOne: mockUpdateOne, insertMany: mockInsertMany, find: mockFind, createIndex: mockCreateIndex, aggregate: mockAggregate });
       mockDb.mockReturnValue({ collection: mockCollection });
       mockConnect.mockResolvedValue(undefined);
       await connectDB();
@@ -236,6 +238,51 @@ describe('mongo.service', () => {
       expect(stages).toContain('$unwind');
       expect(stages).toContain('$match');
       expect(stages).toContain('$group');
+    });
+  });
+
+  describe('archiveDelays — collection disponible', () => {
+    beforeEach(async () => {
+      vi.clearAllMocks();
+      mockFind.mockReturnValue({ toArray: mockToArray });
+      mockAggregate.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
+      mockCreateIndex.mockResolvedValue('index_created');
+      mockInsertMany.mockResolvedValue({ insertedCount: 2 });
+      mockCollection.mockReturnValue({ updateOne: mockUpdateOne, insertMany: mockInsertMany, find: mockFind, createIndex: mockCreateIndex, aggregate: mockAggregate });
+      mockDb.mockReturnValue({ collection: mockCollection });
+      mockConnect.mockResolvedValue(undefined);
+      await connectDB();
+    });
+
+    it('appelle find({}) puis insertMany avec un champ computedAt', async () => {
+      const fakeDoc = { routeId: 'R1', terminal: 'T', routeName: '1', color: '#f00', delays: [] };
+      mockToArray.mockResolvedValue([fakeDoc]);
+
+      await archiveDelays();
+
+      expect(mockFind).toHaveBeenCalledWith({});
+      expect(mockInsertMany).toHaveBeenCalledOnce();
+      const [docs] = mockInsertMany.mock.calls[0];
+      expect(docs).toHaveLength(1);
+      expect(docs[0].computedAt).toBeInstanceOf(Date);
+      expect(docs[0]).not.toHaveProperty('_id');
+    });
+
+    it('ne fait rien si la collection courante est vide', async () => {
+      mockToArray.mockResolvedValue([]);
+
+      await archiveDelays();
+
+      expect(mockInsertMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('archiveDelays — MongoDB indisponible (collection null)', () => {
+    it('ne crash pas et n\'appelle pas insertMany quand connectDB n\'a pas été appelé', async () => {
+      vi.resetModules();
+      const { archiveDelays: archiveDelaysFresh } = await import('../../services/mongo.service.js');
+      await expect(archiveDelaysFresh()).resolves.toBeUndefined();
+      expect(mockInsertMany).not.toHaveBeenCalled();
     });
   });
 });

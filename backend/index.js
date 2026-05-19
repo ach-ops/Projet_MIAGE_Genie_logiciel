@@ -14,8 +14,7 @@ try {
 
 await loadGTFS();
 
-// En prod, Cloud appelle /internal/compute-delays toutes les 15 min pour recalculer les retards moyens par ligne
-if (process.env.NODE_ENV !== 'production') startCron();
+startCron();
 
 const app = createApp();
 

@@ -21,7 +21,8 @@ vi.mock('../../services/realtime.service.js', () => ({
 }));
 
 vi.mock('../../services/mongo.service.js', () => ({
-  saveDelay: vi.fn(),
+  saveDelay:      vi.fn(),
+  archiveDelays:  vi.fn(),
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -30,7 +31,7 @@ vi.mock('../../utils/logger.js', () => ({
 
 import { getAllTerminals, getTheoreticalArrivals, getRouteInfo } from '../../services/gtfs.service.js';
 import { getRealtimeArrivals } from '../../services/realtime.service.js';
-import { saveDelay } from '../../services/mongo.service.js';
+import { saveDelay, archiveDelays } from '../../services/mongo.service.js';
 import { computeDelays } from '../../services/delay.service.js';
 
 // ─── Données de test ──────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ const ROUTE_INFO_1 = { routeName: 'Ligne 1', color: '#FF0000' };
 beforeEach(() => {
   vi.clearAllMocks();
   saveDelay.mockResolvedValue(undefined);
+  archiveDelays.mockResolvedValue(undefined);
   getRouteInfo.mockReturnValue(ROUTE_INFO_1);
 });
 
@@ -159,6 +161,14 @@ describe('computeDelays', () => {
 
     await expect(computeDelays()).resolves.toBeUndefined();
     expect(saveDelay).not.toHaveBeenCalled();
+  });
+
+  it('appelle archiveDelays avant tout calcul', async () => {
+    getAllTerminals.mockReturnValue([]);
+
+    await computeDelays();
+
+    expect(archiveDelays).toHaveBeenCalledOnce();
   });
 
   it('inclut routeName et color depuis getRouteInfo', async () => {
