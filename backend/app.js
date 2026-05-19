@@ -13,6 +13,8 @@ import transportRoutes from './routes/transport.routes.js';
 import weatherRoutes from './routes/weather.routes.js';
 import travauxRoutes from './routes/travaux.routes.js';
 import itineraryRoutes from './routes/itinerary.routes.js';
+import { computeDelays } from './services/delay.service.js';
+import { logger } from './utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,6 +41,9 @@ const itineraryLimiter = rateLimit({
  */
 export function createApp() {
   const app = express();
+
+  // Cloud Run passe par un load balancer — on lui fait confiance pour X-Forwarded-For
+  app.set('trust proxy', 1);
 
   // ─── Swagger (monté AVANT helmet afin d'éviter les problèmes de navigateur) ────────────────────────────────────
 
@@ -258,6 +263,21 @@ export function createApp() {
   app.get('/health', (_req, res) =>
     res.json({ status: 'ok', timestamp: new Date().toISOString() })
   );
+
+  // Appelée toutes les 15 min par GCP pour recalculer les retards moyens par ligne
+  app.post('/internal/compute-delays', async (req, res) => {
+    const token = req.headers['x-internal-token'];
+    if (token !== process.env.INTERNAL_TOKEN) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+    try {
+      await computeDelays();
+      res.json({ status: 'ok' });
+    } catch (err) {
+      logger.error('compute-delays error', { message: err.message });
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   // ─── Erreurs centralisées ───────────────────────────────────────────────────
   app.use(errorHandler);
