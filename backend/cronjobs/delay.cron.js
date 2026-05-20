@@ -1,24 +1,40 @@
-/**
- * Cron : calcul automatique des retards des bus.
- *
- * Se déclenche toutes les 15 minutes et appelle computeDelays()
- * qui compare les horaires théoriques aux données temps réel,
- * puis enregistre les résultats dans MongoDB.
- */
 import cron from 'node-cron';
 import { computeDelays } from '../services/delay.service.js';
+import { cleanOldDelays } from '../services/mongo.service.js';
 import { logger } from '../utils/logger.js';
 
 export function startCron() {
-  logger.info('Cron initialisé (calcul retards toutes les 15 min)');
+  logger.info('Cron initialisé');
 
-  cron.schedule('*/15 * * * *', async () => {
+  // ── Calcul des retards toutes les 30 minutes ────────────────────────────────
+  cron.schedule('*/30 * * * *', async () => {
+    logger.info('Cron lancé');
+    try {
+      await computeDelays();
+      logger.info('Retards calculés et stockés');
+    } catch (err) {
+      logger.error('Erreur cron computeDelays', { message: err.message });
+    }
+  });
 
-  logger.info('Cron : démarrage calcul retards');
-  try {
-    await computeDelays();
-  } catch (err) {
-    logger.error('Cron : erreur lors du calcul des retards', { message: err.message, stack: err.stack });
-  }
+  // ── Nettoyage des entrées > 3h, toutes les 3h ──────────────────────────────
+  // Flag anti-chevauchement : si le nettoyage précédent tourne encore, on skip.
+  let cleanupRunning = false;
+
+  cron.schedule('0 */3 * * *', async () => {
+    if (cleanupRunning) {
+      logger.warn('Nettoyage déjà en cours, skip.');
+      return;
+    }
+    cleanupRunning = true;
+    logger.info('Nettoyage des retards > 3h...');
+    try {
+      await cleanOldDelays();
+      logger.info('Nettoyage terminé');
+    } catch (err) {
+      logger.error('Erreur cron cleanOldDelays', { message: err.message });
+    } finally {
+      cleanupRunning = false;
+    }
   });
 }

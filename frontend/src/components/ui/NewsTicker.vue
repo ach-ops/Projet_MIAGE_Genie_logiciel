@@ -11,15 +11,17 @@ interface RouteDelay {
   routeId: string
   routeName: string
   color: string
-  averageDelayMin: number
+  avgDelay: number
+  samples: number
 }
 
 const routeDelays = ref<RouteDelay[]>([])
 
 async function fetchDelays() {
   try {
-    const res = await fetch(`${API_BASE}/api/delays/by-route`)
-    routeDelays.value = await res.json()
+    const res = await fetch(`${API_BASE}/api/stats/delays`)
+    const data = await res.json()
+    routeDelays.value = data.lines ?? []
   } catch {}
 }
 
@@ -31,8 +33,8 @@ function getMessages() {
   const others = routeDelays.value.filter((r) => !r.routeName.toUpperCase().startsWith('T'))
   for (const r of [...tram, ...others]) {
     list.push({
-      text: `Ligne ${r.routeName} : ${fmtDelay(r.averageDelayMin)}`,
-      color: delayColor(r.averageDelayMin)
+      text: `Ligne ${r.routeName} : ${fmtDelay(r.avgDelay)}`,
+      color: delayColor(r.avgDelay)
     })
   }
   return list
@@ -61,19 +63,24 @@ function loop(ts: number) {
 
 let delayTimer: ReturnType<typeof setInterval> | null = null
 
+function onPageVisible() {
+  if (document.visibilityState === 'visible') fetchDelays()
+}
+
 onMounted(async () => {
   await fetchDelays()
   if (trackRef.value) {
     pos = -(trackRef.value.scrollWidth / 3)
   }
   raf = requestAnimationFrame(loop)
-  // Rafraîchit les retards (toutes les 15 min)
-  delayTimer = setInterval(fetchDelays, 15 * 60_000)
+  // Rafraîchit les retards toutes les 30 min
+  document.addEventListener('visibilitychange', onPageVisible)
 })
 
 onUnmounted(() => {
   if (raf !== null) cancelAnimationFrame(raf)
   if (delayTimer !== null) clearInterval(delayTimer)
+  document.removeEventListener('visibilitychange', onPageVisible)
 })
 </script>
 

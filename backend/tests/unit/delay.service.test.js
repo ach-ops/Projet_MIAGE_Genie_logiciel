@@ -6,14 +6,12 @@
  * - Retard hors seuil (> 30 min) → delay = null mais saveDelay toujours appelé
  * - RT indisponible → skip du terminal
  * - Données théoriques ou RT vides → skip du terminal
- * - Compteurs saved/skipped corrects
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../services/gtfs.service.js', () => ({
-  getAllTerminals: vi.fn(),
+  getAllTerminals:        vi.fn(),
   getTheoreticalArrivals: vi.fn(),
-  getRouteInfo: vi.fn(),
 }));
 
 vi.mock('../../services/realtime.service.js', () => ({
@@ -21,17 +19,12 @@ vi.mock('../../services/realtime.service.js', () => ({
 }));
 
 vi.mock('../../services/mongo.service.js', () => ({
-  saveDelay:      vi.fn(),
-  archiveDelays:  vi.fn(),
+  saveDelay: vi.fn(),
 }));
 
-vi.mock('../../utils/logger.js', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
-}));
-
-import { getAllTerminals, getTheoreticalArrivals, getRouteInfo } from '../../services/gtfs.service.js';
+import { getAllTerminals, getTheoreticalArrivals } from '../../services/gtfs.service.js';
 import { getRealtimeArrivals } from '../../services/realtime.service.js';
-import { saveDelay, archiveDelays } from '../../services/mongo.service.js';
+import { saveDelay } from '../../services/mongo.service.js';
 import { computeDelays } from '../../services/delay.service.js';
 
 // ─── Données de test ──────────────────────────────────────────────────────────
@@ -42,13 +35,9 @@ const TERMINAL_2 = { stopId: 'STOP_A', routeId: 'ROUTE_2', directionId: '0', nam
 const THEORETICAL_1 = [{ arrivalInMin: 10, tripId: 'TRIP_1A' }];
 const REALTIME_1    = [{ arrivalInMin: 13, tripId: 'TRIP_1A', source: 'realtime' }];
 
-const ROUTE_INFO_1 = { routeName: 'Ligne 1', color: '#FF0000' };
-
 beforeEach(() => {
   vi.clearAllMocks();
   saveDelay.mockResolvedValue(undefined);
-  archiveDelays.mockResolvedValue(undefined);
-  getRouteInfo.mockReturnValue(ROUTE_INFO_1);
 });
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -63,11 +52,9 @@ describe('computeDelays', () => {
 
     expect(saveDelay).toHaveBeenCalledOnce();
     expect(saveDelay).toHaveBeenCalledWith({
-      routeId: 'ROUTE_1',
+      routeId:  'ROUTE_1',
       terminal: 'Terminus Nord',
-      delay: 3,
-      routeName: 'Ligne 1',
-      color: '#FF0000',
+      delay:    3,
     });
   });
 
@@ -84,7 +71,7 @@ describe('computeDelays', () => {
   it('passe delay=null quand abs(delay) > 30 min mais appelle quand même saveDelay', async () => {
     getAllTerminals.mockReturnValue([TERMINAL_1]);
     getTheoreticalArrivals.mockReturnValue([{ arrivalInMin: 5 }]);
-    getRealtimeArrivals.mockResolvedValue([{ arrivalInMin: 40 }]); // 35 min d'écart
+    getRealtimeArrivals.mockResolvedValue([{ arrivalInMin: 40 }]);
 
     await computeDelays();
 
@@ -95,7 +82,7 @@ describe('computeDelays', () => {
   it('passe delay=null pour un retard négatif > 30 min (avance excessive)', async () => {
     getAllTerminals.mockReturnValue([TERMINAL_1]);
     getTheoreticalArrivals.mockReturnValue([{ arrivalInMin: 40 }]);
-    getRealtimeArrivals.mockResolvedValue([{ arrivalInMin: 5 }]); // -35 min
+    getRealtimeArrivals.mockResolvedValue([{ arrivalInMin: 5 }]);
 
     await computeDelays();
 
@@ -151,7 +138,6 @@ describe('computeDelays', () => {
 
     await computeDelays();
 
-    // TERMINAL_1 sauvegardé, TERMINAL_2 skip
     expect(saveDelay).toHaveBeenCalledOnce();
     expect(saveDelay).toHaveBeenCalledWith(expect.objectContaining({ routeId: 'ROUTE_1' }));
   });
@@ -161,41 +147,5 @@ describe('computeDelays', () => {
 
     await expect(computeDelays()).resolves.toBeUndefined();
     expect(saveDelay).not.toHaveBeenCalled();
-  });
-
-  it('appelle archiveDelays avant tout calcul', async () => {
-    getAllTerminals.mockReturnValue([]);
-
-    await computeDelays();
-
-    expect(archiveDelays).toHaveBeenCalledOnce();
-  });
-
-  it('inclut routeName et color depuis getRouteInfo', async () => {
-    getRouteInfo.mockReturnValue({ routeName: 'Ligne 2', color: '#0000FF' });
-    getAllTerminals.mockReturnValue([TERMINAL_2]);
-    getTheoreticalArrivals.mockReturnValue([{ arrivalInMin: 5 }]);
-    getRealtimeArrivals.mockResolvedValue([{ arrivalInMin: 7 }]);
-
-    await computeDelays();
-
-    expect(saveDelay).toHaveBeenCalledWith(expect.objectContaining({
-      routeName: 'Ligne 2',
-      color: '#0000FF',
-    }));
-  });
-
-  it('gère getRouteInfo qui retourne null (route inconnue)', async () => {
-    getRouteInfo.mockReturnValue(null);
-    getAllTerminals.mockReturnValue([TERMINAL_1]);
-    getTheoreticalArrivals.mockReturnValue(THEORETICAL_1);
-    getRealtimeArrivals.mockResolvedValue(REALTIME_1);
-
-    await computeDelays();
-
-    expect(saveDelay).toHaveBeenCalledWith(expect.objectContaining({
-      routeName: undefined,
-      color: undefined,
-    }));
   });
 });

@@ -13,6 +13,7 @@ import transportRoutes from './routes/transport.routes.js';
 import weatherRoutes from './routes/weather.routes.js';
 import travauxRoutes from './routes/travaux.routes.js';
 import itineraryRoutes from './routes/itinerary.routes.js';
+import statsRoutes from './routes/stats.route.js';
 import { computeDelays } from './services/delay.service.js';
 import { logger } from './utils/logger.js';
 
@@ -255,7 +256,8 @@ export function createApp() {
   app.use('/api', transportRoutes);
   app.use('/api/travaux', travauxRoutes);
   app.use('/api/weather', weatherRoutes);
-  // On met la limite de requete d'itinéraire 
+  app.use('/api/stats', statsRoutes);
+  // On met la limite de requete d'itinéraire
   app.use('/api/itinerary', itineraryLimiter, itineraryRoutes);
 
   // ─── Healthcheck ────────────────────────────────────────────────────────────
