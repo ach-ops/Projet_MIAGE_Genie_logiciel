@@ -185,7 +185,7 @@ describe('mongo.service', () => {
       const result = await getDelayStats();
 
       expect(result.lines).toEqual(fakeLines);
-      expect(result.globalAverage).toBe(2); // (3 + 1) / 2
+      expect(result.globalAverage).toBe(2.2); // (3×8 + 1×5) / (8+5) = 29/13 ≈ 2.2
     });
 
     it('retourne globalAverage = 0 si aucune ligne', async () => {
