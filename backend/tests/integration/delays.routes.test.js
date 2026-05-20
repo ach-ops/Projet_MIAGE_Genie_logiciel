@@ -27,6 +27,7 @@ vi.mock('../../services/gtfs.service.js', () => ({
   getRouteStops: vi.fn(() => []),
   getStopById: vi.fn(() => null),
   debugStop: vi.fn(() => ({ exists: false })),
+  getRouteInfo: vi.fn(() => null),
 }));
 
 vi.mock('../../services/arrivals.service.js', () => ({

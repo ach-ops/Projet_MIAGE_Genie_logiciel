@@ -1,35 +1,14 @@
-/**
- * Service MongoDB — Stockage des retards de bus.
- *
- * Chaque document représente un terminus de ligne et contient
- * un historique de mesures de retard.
- *
- * Structure d'un document :
- * {
- *   routeId:   "LIGNE_1",
- *   terminal:  "Terminus Brabois",
- *   routeName: "1",
- *   color:     "#E2001A",
- *   delays: [
- *     { date: ISODate("2024-01-15T14:00:00Z"), delay: 2.5 },
- *   ]
- * }
- */
 import { MongoClient } from 'mongodb';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 
-// Nombre max de mesures conservées par terminus (≈ 5 h d'historique).
-const MAX_DELAY_ENTRIES = 288;
+// Fenêtre glissante pour les statistiques de retard
+const STATS_WINDOW_MS = 3 * 60 * 60 * 1000;   // 3 heures
+const CLEANUP_WINDOW_MS = 3 * 60 * 60 * 1000;  // on purge au-delà de 3h aussi
 
 let client = null;
 let collection = null;
-let oldDelaysCollection = null;
 
-/**
- * Ouvre la connexion MongoDB et prépare la collection "delays".
- * Appelé une seule fois au démarrage du serveur.
- */
 export async function connectDB() {
   client = new MongoClient(config.mongoUri, {
     serverSelectionTimeoutMS: 5_000,
@@ -39,13 +18,9 @@ export async function connectDB() {
   await client.connect();
   const db = client.db(config.mongoDb);
   collection = db.collection('delays');
-  oldDelaysCollection = db.collection('old_delays');
 
-  // Index pour accélérer les recherches et éviter les doublons par ligne + terminus
   await collection.createIndex({ routeId: 1, terminal: 1 }, { unique: true });
   await collection.createIndex({ routeId: 1 });
-  await oldDelaysCollection.createIndex({ routeId: 1 });
-  await oldDelaysCollection.createIndex({ computedAt: 1 });
 
   let safeUri;
   try {
@@ -59,24 +34,8 @@ export async function connectDB() {
 }
 
 /**
- * Archive un instantané de la collection "delays" dans "old_delays".
- * Appelé en début de chaque calcul de retards pour conserver l'historique.
- */
-export async function archiveDelays() {
-  if (!collection || !oldDelaysCollection) return;
-  const current = await collection.find({}).toArray();
-  if (!current.length) return;
-  const now = new Date();
-  // eslint-disable-next-line no-unused-vars
-  const docs = current.map(({ _id, ...doc }) => ({ ...doc, computedAt: now }));
-  await oldDelaysCollection.insertMany(docs);
-  logger.info(`${docs.length} documents archivés dans old_delays`);
-}
-
-/**
  * Enregistre une mesure de retard dans MongoDB.
- * Crée le document si absent, sinon ajoute la mesure à l'historique existant.
- * L'historique est limité à MAX_DELAY_ENTRIES entrées.
+ * Crée le document si absent, sinon ajoute la mesure à l'historique.
  */
 export async function saveDelay(data) {
   if (!collection) {
@@ -87,71 +46,109 @@ export async function saveDelay(data) {
   await collection.updateOne(
     { routeId: data.routeId, terminal: data.terminal },
     {
-      // Met à jour le nom et la couleur de la ligne
-      $set: { routeName: data.routeName, color: data.color },
-      // Ajoute la mesure et supprime les plus anciennes si la limite est atteinte
       $push: {
         delays: {
-          $each:  [{ date: new Date(), delay: data.delay }],
-          $slice: -MAX_DELAY_ENTRIES,
+          date:  new Date(),
+          delay: data.delay,
         },
       },
     },
-    { upsert: true }, // crée le document s'il n'existe pas encore
+    { upsert: true },
   );
 }
 
 /**
- * Retourne tous les documents de la collection.
- * Utilisé uniquement en interne ou pour du debug.
+ * Supprime les entrées de delays datant de plus de 3h dans chaque document.
+ * Ne supprime pas les documents eux-mêmes.
  */
-export async function getDelays() {
-  if (!collection) return [];
-  return collection.find({}).toArray();
+export async function cleanOldDelays() {
+  if (!collection) return;
+  const limit = new Date(Date.now() - CLEANUP_WINDOW_MS);
+  const result = await collection.updateMany(
+    {},
+    { $pull: { delays: { date: { $lt: limit } } } },
+  );
+  logger.info(`cleanOldDelays : ${result.modifiedCount} documents nettoyés`);
 }
 
 /**
- * Retourne le retard moyen (en minutes) pour chaque ligne.
- * Le calcul est fait directement dans MongoDB pour éviter de charger tout l'historique.
+ * Calcule les statistiques de retard sur la fenêtre glissante des 3 dernières heures.
+ * Retourne la moyenne par ligne (avec samples) et la moyenne globale.
+ */
+export async function getDelayStats() {
+  if (!collection) return { lines: [], globalAverage: 0 };
+
+  const since = new Date(Date.now() - STATS_WINDOW_MS);
+
+  const lines = await collection.aggregate([
+    { $unwind: '$delays' },
+    {
+      $match: {
+        'delays.delay': { $ne: null },
+        'delays.date':  { $gte: since },
+      },
+    },
+    {
+      $group: {
+        _id:      '$routeId',
+        avgDelay: { $avg: '$delays.delay' },
+        samples:  { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        _id:      0,
+        routeId:  '$_id',
+        avgDelay: { $round: ['$avgDelay', 1] },
+        samples:  1,
+      },
+    },
+  ]).toArray();
+
+  const totalSamples = lines.reduce((sum, l) => sum + l.samples, 0);
+  const globalAverage = totalSamples > 0
+    ? Math.round(lines.reduce((sum, l) => sum + l.avgDelay * l.samples, 0) / totalSamples * 10) / 10
+    : 0;
+
+  return { lines, globalAverage };
+}
+
+/**
+ * Retourne le retard instantané (dernière mesure) par ligne.
+ * routeName et color sont enrichis côté route handler via getRouteInfo.
  */
 export async function getDelaysByRoute() {
   if (!collection) return [];
 
   return collection.aggregate([
-    { $unwind: '$delays' },
-    { $match:  { 'delays.delay': { $ne: null } } },
+    { $addFields: { lastDelay: { $last: '$delays' } } },
+    { $match:     { 'lastDelay.delay': { $ne: null } } },
     {
       $group: {
-        _id:       '$routeId',
-        routeName: { $first: '$routeName' },
-        color:     { $first: '$color' },
-        avgDelay:  { $avg: '$delays.delay' },
+        _id:      '$routeId',
+        avgDelay: { $avg: '$lastDelay.delay' },
       },
     },
     {
       $project: {
         _id:             0,
         routeId:         '$_id',
-        routeName:       1,
-        color:           1,
         averageDelayMin: { $round: ['$avgDelay', 1] },
       },
     },
-    { $sort: { routeName: 1 } },
   ]).toArray();
 }
 
 /**
- * Retourne le retard moyen global (toutes lignes confondues), en minutes.
- * Retourne null si aucune donnée n'est disponible.
+ * Retourne le retard moyen global (toutes lignes), basé sur la dernière mesure par terminal.
  */
 export async function getAverageDelay() {
   if (!collection) return null;
 
   const [result] = await collection.aggregate([
-    { $unwind: '$delays' },
-    { $match:  { 'delays.delay': { $ne: null } } },
-    { $group:  { _id: null, avg: { $avg: '$delays.delay' } } },
+    { $addFields: { lastDelay: { $last: '$delays' } } },
+    { $match:     { 'lastDelay.delay': { $ne: null } } },
+    { $group:     { _id: null, avg: { $avg: '$lastDelay.delay' } } },
   ]).toArray();
 
   if (!result) return null;

@@ -51,27 +51,32 @@ const averageDelay = ref<number | null>(null)
 
 async function fetchAverageDelay() {
   try {
-    const res = await fetch(`${API_BASE}/api/delays/average`)
-    averageDelay.value = (await res.json()).averageDelayMin
+    const res = await fetch(`${API_BASE}/api/stats/delays`)
+    averageDelay.value = (await res.json()).globalAverage
   } catch {
   }
 }
 
-fetchAverageDelay()
-
 let arrivalsTimer: ReturnType<typeof setInterval> | null = null
 let delayTimer: ReturnType<typeof setInterval> | null = null
 
+function onPageVisible() {
+  if (document.visibilityState === 'visible') fetchAverageDelay()
+}
+
 onMounted(() => {
+  fetchAverageDelay()
   // Arrivées temps réel : refresh toutes les 30s
   arrivalsTimer = setInterval(() => refreshArrivals(), 30_000)
-  // Retards moyens : aligné sur le cron (toutes les 15 min)
-  delayTimer = setInterval(() => fetchAverageDelay(), 15 * 60_000)
+  // Retards moyens : toutes les 30 min (aligné sur le cron) + visibilitychange
+  delayTimer = setInterval(() => fetchAverageDelay(), 30 * 60_000)
+  document.addEventListener('visibilitychange', onPageVisible)
 })
 
 onUnmounted(() => {
   if (arrivalsTimer !== null) clearInterval(arrivalsTimer)
   if (delayTimer !== null) clearInterval(delayTimer)
+  document.removeEventListener('visibilitychange', onPageVisible)
 })
 
 // ── Navigation entre onglets ───────────────────────────────────────────────
