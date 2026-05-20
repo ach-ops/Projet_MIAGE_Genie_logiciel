@@ -20,6 +20,7 @@ import {
   listRouteStops,
 } from '../controllers/transport.controllers.js';
 import { getAverageDelay, getDelaysByRoute } from '../services/mongo.service.js';
+import { getRouteInfo } from '../services/gtfs.service.js';
 
 const router = Router();
 
@@ -70,8 +71,19 @@ router.get('/delays/average', asyncHandler(async (_req, res) => {
  *         $ref: '#/components/responses/InternalError'
  */
 router.get('/delays/by-route', asyncHandler(async (_req, res) => {
-  const routes = await getDelaysByRoute();
-  res.json(routes);
+  const delays = await getDelaysByRoute();
+  const enriched = delays
+    .map(d => {
+      const info = getRouteInfo(d.routeId);
+      return {
+        routeId:         d.routeId,
+        routeName:       info?.routeName ?? d.routeId,
+        color:           info?.color     ?? '#888888',
+        averageDelayMin: d.averageDelayMin,
+      };
+    })
+    .sort((a, b) => a.routeName.localeCompare(b.routeName));
+  res.json(enriched);
 }));
 
 // ─── Arrêts ────────────────────────────────────────────────────────────────────

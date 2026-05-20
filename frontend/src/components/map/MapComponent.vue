@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { importLibrary, setOptions } from '@googlemaps/js-api-loader'
 import icons from '../../types/icon'
 import velibIconImage from '../../img/velo-icon.png'
@@ -23,14 +23,14 @@ const props = defineProps<{
 // ── État carte ─────────────────────────────────────────────────────────────
 
 const mapContainer = ref<HTMLDivElement | null>(null)
-const map = ref<google.maps.Map | null>(null)
-const stopMarker = ref<google.maps.Marker | null>(null)
+const map = shallowRef<google.maps.Map | null>(null)
+const stopMarker = shallowRef<google.maps.Marker | null>(null)
 let routePolylines: google.maps.Polyline[] = []
 let routeStopMarkers: google.maps.Marker[] = []
 
 // ── État Vélib ─────────────────────────────────────────────────────────────
 
-const velibMarkers = ref<google.maps.Marker[]>([])
+const velibMarkers = shallowRef<google.maps.Marker[]>([])
 const velibVisible = ref(true)
 const velibLoading = ref(false)
 const velibCount = ref(0)
