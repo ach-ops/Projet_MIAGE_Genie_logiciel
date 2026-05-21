@@ -77,19 +77,22 @@ function resolveArrivalForStop(stopId, tripId, stopTimeUpdate, nowSec, reference
   const staticStopTimes = getStopTimesForTrip(tripId);
   const ourSequence = scheduled.sequence;
 
-  // Retards connus par numéro d'ordre dans le trajet
-  const delayBySequence = new Map(); // numéro d'arrêt → retard en secondes
+  // Construit la map des retards connus : pour chaque arrêt mentionné dans le flux,
+  // on récupère son retard soit directement (champ delay), soit en calculant (RT - théorique)
+  const delayBySequence = new Map(); // numéro de séquence dans le trajet → retard en secondes
   for (const stu of stopTimeUpdate) {
+    // Retrouve l'entrée statique correspondante pour connaître son numéro d'ordre (stop_sequence)
     const staticSt = staticStopTimes.find(s => s.stop_id?.trim() === stu.stopId);
-    if (!staticSt) continue;
+    if (!staticSt) continue; // arrêt du flux RT non reconnu dans les données statiques
 
     const seq = Number(staticSt.stop_sequence);
     const delay = stu.arrival?.delay ?? stu.departure?.delay ?? null;
 
     if (delay !== null) {
+      // Le flux fournit directement le retard en secondes — cas le plus simple
       delayBySequence.set(seq, longToNumber(delay));
     } else if (stu.arrival?.time || stu.departure?.time) {
-      // Calcul du retard : heure réelle - heure théorique
+      // Retard non fourni → on le calcule : heure réelle (timestamp) - heure théorique (GTFS statique)
       const rtTs = longToNumber(stu.arrival?.time ?? stu.departure?.time);
       const theoScheduled = getScheduledArrivalForTripAtStop(tripId, stu.stopId, referenceDate);
       if (theoScheduled) {
@@ -100,17 +103,18 @@ function resolveArrivalForStop(stopId, tripId, stopTimeUpdate, nowSec, reference
 
   if (delayBySequence.size === 0) return { source: 'skip' }; // aucun retard disponible
 
-  // Dernier arrêt avant le nôtre avec un retard connu
+  // Cherche l'arrêt le plus proche AVANT le nôtre dans la séquence du trajet
   let lastKnownDelay = null;
   for (const [seq, delay] of delayBySequence) {
     if (seq < ourSequence) {
+      // Garde l'arrêt avec le plus grand numéro d'ordre inférieur au nôtre (= le plus proche)
       if (lastKnownDelay === null || seq > lastKnownDelay.seq) {
         lastKnownDelay = { seq, delay };
       }
     }
   }
 
-  // Si aucun arrêt avant, on prend le premier après
+  // Aucun arrêt connu avant le nôtre → on prend le premier arrêt après (propagation arrière)
   if (lastKnownDelay === null) {
     for (const [seq, delay] of delayBySequence) {
       if (lastKnownDelay === null || seq < lastKnownDelay.seq) {
@@ -147,7 +151,7 @@ export async function getRealtimeArrivals(stopId, routeId, directionId) {
     if (trip.routeId !== routeId) continue;
     debug.routeMatch++;
 
-    // directionId peut être absent du flux → on filtre seulement s'il est présent
+    // directionId peut être absent du flux GTFS-RT → on ne filtre que s'il est explicitement renseigné
     const feedDir = trip.directionId;
     if (feedDir !== null && feedDir !== undefined && Number(feedDir) !== Number(directionId)) {
       debug.dirSkip++;
@@ -166,6 +170,7 @@ export async function getRealtimeArrivals(stopId, routeId, directionId) {
       directionId: feedDir ?? directionId,
       arrivalTimestamp: resolved.timestamp,
       arrivalLocalTime: formatTimestampToLocalTime(resolved.timestamp * 1000, { timeZone: config.timeZone }),
+      // Math.ceil : on arrondit au-dessus pour ne jamais afficher 0 min quand le bus arrive dans 30s
       arrivalInMin: Math.ceil((resolved.timestamp - nowSec) / 60),
       source: resolved.source === 'exact' ? 'realtime' : 'realtime_estimated',
     });

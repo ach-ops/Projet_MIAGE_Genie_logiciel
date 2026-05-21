@@ -54,9 +54,10 @@ export function useTransportData() {
       allStops.value = data
       const groups = new Map<string, string[]>()
       for (const s of data) {
-        if (s.location_type === '1') continue
+        if (s.location_type === '1') continue // type 1 = nœud de station GTFS (pas un arrêt physique)
         const name = s.stop_name
         if (!groups.has(name)) groups.set(name, [])
+        // stopGroups : Map<stopName → [stopId, ...]> pour regrouper les quais d'un même arrêt
         groups.get(name)!.push(s.stop_id)
       }
       stopGroups.value = groups
@@ -86,6 +87,7 @@ export function useTransportData() {
     try {
       const allRoutesMap = new Map<string, RouteInfo>()
       const routeStopMap = new Map<string, string[]>()
+      // Requêtes parallèles sur tous les stopIds du groupe pour avoir toutes les lignes de l'arrêt
       const results = await Promise.all(
         stopIds.map(async (sid) => {
           const res = await fetch(`${API}/stops/${encodeURIComponent(sid)}/routes`)
@@ -140,6 +142,7 @@ export function useTransportData() {
       )
       for (const { stopId, directions: dirs } of results) {
         for (const d of dirs) {
+          // La clé deduplicates les directions identiques venant de plusieurs stopIds
           const key = `${d.directionId}|${d.label}`
           if (!allDirectionsMap.has(key)) allDirectionsMap.set(key, { ...d, stopId, routeId })
         }
@@ -164,6 +167,7 @@ export function useTransportData() {
     loadingArrivals.value = true
     error.value = ''
     try {
+      // Le format du selectedDirection est "stopId|directionId"
       const parts = selectedDirection.value.split('|')
       const stopId = parts[0]
       const directionId = parts[1]
@@ -201,9 +205,11 @@ export function useTransportData() {
     const usedTheoreticalTripIds = new Set<string>()
 
     for (const rt of arrivals.value.realtime) {
+      // Priorité : association par tripId ; si absent du théorique, on cherche par proximité temporelle
       let th = theoreticalByTrip.get(rt.tripId)
 
       if (!th) {
+        // Fallback : on associe le passage théorique le plus proche
         let minDiff = Infinity
         for (const t of arrivals.value.theoretical) {
           if (usedTheoreticalTripIds.has(t.tripId)) continue

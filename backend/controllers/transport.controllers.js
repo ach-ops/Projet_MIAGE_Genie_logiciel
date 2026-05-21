@@ -65,11 +65,13 @@ export function listDirections(req, res) {
 
 // ─── Passages ─────────────────────────────────────────────────────────────────
 
+// Temps réel seul — utilisé en interne pour le calcul des retards
 export async function listArrivals(req, res) {
   const { stopId, routeId, directionId } = req.params;
   res.json(await getArrivalsRealtime(stopId, routeId, directionId));
 }
 
+// Fusion temps réel + théorique — endpoint utilisé par le frontend pour l'affichage des passages
 export async function listAllArrivals(req, res) {
   const { stopId, routeId, directionId } = req.params;
   res.json(await getAllArrivals(stopId, routeId, directionId));

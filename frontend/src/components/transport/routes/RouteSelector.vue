@@ -24,6 +24,7 @@ function selectRoute(route: RouteInfo) {
   emit('update:selectedRoute', route.route_id)
 }
 
+// Réinitialise la sélection quand la liste des lignes change (nouvel arrêt sélectionné)
 watch(
   () => props.routes,
   () => {

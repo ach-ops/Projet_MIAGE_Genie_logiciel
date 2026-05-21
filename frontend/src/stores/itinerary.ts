@@ -15,6 +15,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
     const to = toAddress.value.trim()
     if (!from || !to) return
 
+    // Vérification côté client pour éviter un appel API inutile
     if (from.toLowerCase() === to.toLowerCase()) {
       error.value = "Le départ et l'arrivée sont identiques."
       result.value = null
@@ -40,6 +41,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
   }
 
   function swap() {
+    // Échange départ-arrivée et efface le résultat précédent
     const tmp = fromAddress.value
     fromAddress.value = toAddress.value
     toAddress.value = tmp

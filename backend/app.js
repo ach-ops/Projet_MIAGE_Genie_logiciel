@@ -235,7 +235,7 @@ export function createApp() {
   // ─── Sécurité ───────────────────────────────────────────────────────────────
   app.use(helmet());
 
-  // CORS restreint aux origines autorisées
+  // CORS restreint aux origines autorisées — seules les méthodes de lecture sont exposées
   app.use(cors({
     origin: config.corsOrigins,
     methods: ['GET', 'OPTIONS'],
@@ -266,7 +266,7 @@ export function createApp() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() })
   );
 
-  // Appelée toutes les 15 min par GCP pour recalculer les retards moyens par ligne
+  // Endpoint interne déclenché par Cloud Scheduler sur GCP pour recalculer les retards moyens des lignes
   app.post('/internal/compute-delays', async (req, res) => {
     const token = req.headers['x-internal-token'];
     if (token !== process.env.INTERNAL_TOKEN) {

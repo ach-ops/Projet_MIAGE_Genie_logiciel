@@ -30,6 +30,7 @@ const nextDayForecast = ref<WeatherData['forecast']['forecastday'][0]['hour']>([
 const loading = ref(true)
 const error = ref('')
 
+// Fusionne aujourd'hui + demain pour avoir les prochaines heures même en fin de journée
 const upcomingHours = computed(() => {
   const now = new Date()
   const allHours = hourlyForecast.value.concat(nextDayForecast.value)
@@ -42,6 +43,7 @@ onMounted(async () => {
     if (!res.ok) throw new Error('Erreur API météo')
     const data: WeatherData = await res.json()
     currentWeather.value = data.current
+    // forecastday[0] = aujourd'hui, forecastday[1] = demain (pour upcomingHours en fin de soirée)
     hourlyForecast.value = data.forecast.forecastday[0]?.hour ?? []
     nextDayForecast.value = data.forecast.forecastday[1]?.hour ?? []
   } catch (err) {
@@ -51,6 +53,7 @@ onMounted(async () => {
   }
 })
 
+// WeatherAPI renvoie le format "2026-04-19 14:00" → on extrait "14:00"
 function formatTime(time: string): string {
   return time.split(' ')[1]?.substring(0, 5) ?? time
 }
@@ -96,6 +99,7 @@ function formatTime(time: string): string {
       <div
         class="flex items-center gap-2 sm:gap-2.5 shrink-0 pr-3 sm:pr-4 mr-3 sm:mr-4 border-r border-slate-100 dark:border-white/8"
       >
+        <!-- WeatherAPI retourne des URLs sans protocole (//cdn.weatherapi.com/…) → on préfixe https: -->
         <img
           v-if="currentWeather?.condition.icon"
           :src="'https:' + currentWeather.condition.icon"
