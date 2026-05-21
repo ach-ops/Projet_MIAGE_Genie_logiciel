@@ -119,8 +119,10 @@ watch(selectedRouteColor, (color) => emit('update:selectedRouteColor', color))
 
 <template>
   <div
-    class="flex flex-col h-full overflow-hidden dark:border-[#30363d]/60 dark:shadow-none"
-    :style="theme === 'dark' ? 'background:var(--dk-surface)' : 'background:#f8f8ff'"
+    class="flex flex-col h-full overflow-hidden dark:border-[#30363d]/60"
+    :style="theme === 'dark'
+      ? 'background:var(--dk-surface); box-shadow: 4px 0 32px rgba(0,0,0,0.55), 1px 0 0 rgba(255,255,255,0.04)'
+      : 'background:#f8f8ff; box-shadow: 4px 0 20px rgba(0,0,0,0.08)'"
   >
     <!-- ── Header ──────────────────── -->
     <AppHeader

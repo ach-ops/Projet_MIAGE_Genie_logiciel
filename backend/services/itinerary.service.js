@@ -101,16 +101,19 @@ export async function suggestAddresses(query) {
     : `${query} nancy`;
 
   const res = await axios.get(ADRESSE_API, {
-    params: { q, limit: 6 },
+    params: { q, limit: 15 },
     timeout: config.axiosTimeoutMs,
   });
 
-  return (res.data.features || []).map(f => ({
-    label:       f.properties.label,
-    displayName: f.properties.label,
-    lat:         f.geometry.coordinates[1],
-    lon:         f.geometry.coordinates[0],
-  }));
+  return (res.data.features || [])
+    .filter(f => (f.properties.postcode || '').startsWith('54'))
+    .slice(0, 6)
+    .map(f => ({
+      label:       f.properties.label,
+      displayName: f.properties.label,
+      lat:         f.geometry.coordinates[1],
+      lon:         f.geometry.coordinates[0],
+    }));
 }
 
 // ─── Recherche d'arrêts proches ───────────────────────────────────────────────

@@ -1,6 +1,23 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { importLibrary, setOptions } from '@googlemaps/js-api-loader'
+function loadGoogleMapsApi(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (globalThis.google?.maps?.Map) { resolve(); return }
+    const cb = '__googleMapsReady'
+    ;(globalThis as unknown as Record<string, unknown>)[cb] = () => {
+      delete (globalThis as unknown as Record<string, unknown>)[cb]
+      google.maps.importLibrary('maps')
+        .then(() => google.maps.importLibrary('marker'))
+        .then(() => resolve())
+        .catch(reject)
+    }
+    const s = document.createElement('script')
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string)}&v=weekly&loading=async&callback=${cb}`
+    s.async = true
+    s.onerror = () => reject(new Error('Google Maps API failed to load'))
+    document.head.appendChild(s)
+  })
+}
 import icons from '../../types/icon'
 import velibIconImage from '../../img/velo-icon.png'
 import type { Incident, Stop } from '@/types/types'
@@ -24,13 +41,13 @@ const props = defineProps<{
 
 const mapContainer = ref<HTMLDivElement | null>(null)
 const map = shallowRef<google.maps.Map | null>(null)
-const stopMarker = shallowRef<google.maps.Marker | null>(null)
+const stopMarker = shallowRef<google.maps.marker.AdvancedMarkerElement | null>(null)
 let routePolylines: google.maps.Polyline[] = []
-let routeStopMarkers: google.maps.Marker[] = []
+let routeStopMarkers: google.maps.marker.AdvancedMarkerElement[] = []
 
 // ── État Vélib ─────────────────────────────────────────────────────────────
 
-const velibMarkers = shallowRef<google.maps.Marker[]>([])
+const velibMarkers = shallowRef<google.maps.marker.AdvancedMarkerElement[]>([])
 const velibVisible = ref(true)
 const velibLoading = ref(false)
 const velibCount = ref(0)
@@ -46,47 +63,11 @@ type VelibStation = {
   docksAvailable: number
 }
 
-// ── Thème ──────────────────────────────────────────────────────────────────
-
-const DARK_STYLES: google.maps.MapTypeStyle[] = [
-  { elementType: 'geometry', stylers: [{ color: '#212121' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
-  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#757575' }] },
-  {
-    featureType: 'administrative.country',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#9e9e9e' }]
-  },
-  {
-    featureType: 'administrative.locality',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#bdbdbd' }]
-  },
-  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#181818' }] },
-  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
-  { featureType: 'poi.park', elementType: 'labels.text.stroke', stylers: [{ color: '#1b1b1b' }] },
-  { featureType: 'road', elementType: 'geometry.fill', stylers: [{ color: '#2c2c2c' }] },
-  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#8a8a8a' }] },
-  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#373737' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3c3c3c' }] },
-  {
-    featureType: 'road.highway.controlled_access',
-    elementType: 'geometry',
-    stylers: [{ color: '#4e4e4e' }]
-  },
-  { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
-  { featureType: 'transit', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#000000' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3d3d3d' }] }
-]
-
 // ── InfoWindow ──────────────────────────────────────────────────────
 
 let activeInfoWindow: google.maps.InfoWindow | null = null
 
-function openInfoWindow(marker: google.maps.Marker, content: string) {
+function openInfoWindow(marker: google.maps.marker.AdvancedMarkerElement, content: string) {
   if (activeInfoWindow) activeInfoWindow.close()
   activeInfoWindow = new google.maps.InfoWindow({ content })
   activeInfoWindow.open(map.value!, marker)
@@ -95,12 +76,29 @@ function openInfoWindow(marker: google.maps.Marker, content: string) {
 
 // ── Icône personnalisée ────────────────────────────────────────────────────
 
-function markerIcon(url: string, size = 32): google.maps.Icon {
-  return {
-    url,
-    scaledSize: new google.maps.Size(size, size),
-    anchor: new google.maps.Point(size / 2, size)
-  }
+function makeImgElement(url: string, size = 32): HTMLImageElement {
+  const img = document.createElement('img')
+  img.src = url
+  img.width = size
+  img.height = size
+  img.style.display = 'block'
+  return img
+}
+
+function makeCircleElement(color: string): SVGSVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('width', '14')
+  svg.setAttribute('height', '14')
+  svg.setAttribute('viewBox', '0 0 14 14')
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+  circle.setAttribute('cx', '7')
+  circle.setAttribute('cy', '7')
+  circle.setAttribute('r', '5')
+  circle.setAttribute('fill', '#ffffff')
+  circle.setAttribute('stroke', color)
+  circle.setAttribute('stroke-width', '3')
+  svg.appendChild(circle)
+  return svg
 }
 
 // Choisit l'icône d'incident en fonction de mots-clés dans la description
@@ -119,7 +117,7 @@ async function loadVelibStations() {
   if (!map.value) return
   velibLoading.value = true
 
-  velibMarkers.value.forEach((m) => m.setMap(null))
+  velibMarkers.value.forEach((m) => { m.map = null })
   velibMarkers.value = []
   velibCount.value = 0
 
@@ -142,14 +140,10 @@ async function loadVelibStations() {
       const dockColor = docks === 0 ? '#ef4444' : docks <= 2 ? '#f59e0b' : '#10b981'
       const isDark = theme.value === 'dark'
 
-      const marker = new google.maps.Marker({
+      const marker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat, lng },
         map: velibVisible.value ? map.value : null,
-        icon: {
-          url: velibIconImage,
-          scaledSize: new google.maps.Size(35, 35),
-          anchor: new google.maps.Point(17, 17)
-        }
+        content: makeImgElement(velibIconImage, 35)
       })
 
       const content = `<div class="font-sans w-[210px] overflow-hidden">
@@ -189,7 +183,7 @@ async function loadVelibStations() {
         </div>
       </div>`
 
-      marker.addListener('click', () => openInfoWindow(marker, content))
+      marker.addListener('gmp-click', () => openInfoWindow(marker, content))
       velibMarkers.value.push(marker)
       velibCount.value += 1
     }
@@ -203,7 +197,7 @@ async function loadVelibStations() {
 function toggleVelibLayer() {
   velibVisible.value = !velibVisible.value
   const target = velibVisible.value ? map.value : null
-  velibMarkers.value.forEach((m) => m.setMap(target as google.maps.Map | null))
+  velibMarkers.value.forEach((m) => { m.map = target as google.maps.Map | null })
   if (velibVisible.value && velibMarkers.value.length === 0) {
     void loadVelibStations()
   }
@@ -223,10 +217,10 @@ async function loadTravaux() {
     const lng = parts[1]
     if (!lat || !lng) return
 
-    const marker = new google.maps.Marker({
+    const marker = new google.maps.marker.AdvancedMarkerElement({
       position: { lat, lng },
       map: map.value!,
-      icon: markerIcon(getTravauxIconUrl(incident.short_description))
+      content: makeImgElement(getTravauxIconUrl(incident.short_description))
     })
 
     const content = `<div class="font-sans min-w-[200px]">
@@ -241,7 +235,7 @@ async function loadTravaux() {
       </div>
     </div>`
 
-    marker.addListener('click', () => openInfoWindow(marker, content))
+    marker.addListener('gmp-click', () => openInfoWindow(marker, content))
   })
 }
 
@@ -256,12 +250,12 @@ function showStopOnMap(stopName: string) {
   const lng = Number(stop.stop_lon)
   const isDark = theme.value === 'dark'
 
-  stopMarker.value?.setMap(null)
+  if (stopMarker.value) stopMarker.value.map = null
 
-  stopMarker.value = new google.maps.Marker({
+  stopMarker.value = new google.maps.marker.AdvancedMarkerElement({
     position: { lat, lng },
     map: map.value,
-    icon: markerIcon(icons.busIcon, 60)
+    content: makeImgElement(icons.busIcon, 60)
   })
 
   const content = `<div class="font-sans min-w-[160px]">
@@ -276,7 +270,7 @@ function showStopOnMap(stopName: string) {
     </div>
   </div>`
 
-  openInfoWindow(stopMarker.value, content)
+  openInfoWindow(stopMarker.value!, content)
   map.value.setCenter({ lat, lng })
   map.value.setZoom(15)
 }
@@ -287,7 +281,7 @@ watch(
     if (name) {
       showStopOnMap(name)
     } else {
-      stopMarker.value?.setMap(null)
+      if (stopMarker.value) stopMarker.value.map = null
       stopMarker.value = null
     }
   }
@@ -298,7 +292,7 @@ watch(
 function clearRouteLayers() {
   routePolylines.forEach((p) => p.setMap(null))
   routePolylines = []
-  routeStopMarkers.forEach((m) => m.setMap(null))
+  routeStopMarkers.forEach((m) => { m.map = null })
   routeStopMarkers = []
 }
 
@@ -351,17 +345,10 @@ async function runDraw(routeId: string, directionId: string, lineColor: string) 
     if (showStops) {
       const isDark = theme.value === 'dark'
       for (const stop of validStops) {
-        const stopMk = new google.maps.Marker({
+        const stopMk = new google.maps.marker.AdvancedMarkerElement({
           position: { lat: stop.lat, lng: stop.lon },
           map: map.value!,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 5,
-            fillColor: '#ffffff',
-            fillOpacity: 1,
-            strokeColor: lineColor,
-            strokeWeight: 3
-          }
+          content: makeCircleElement(lineColor)
         })
         const content = `<div class="font-sans min-w-[160px]">
           <div class="relative pl-3.5 pr-8 py-2.5" style="background:linear-gradient(135deg,${lineColor},${lineColor}cc)">
@@ -374,7 +361,7 @@ async function runDraw(routeId: string, directionId: string, lineColor: string) 
             <span class="text-[11px] font-medium ${isDark ? 'text-[#8892a8]' : 'text-slate-400'}">Arrêt</span>
           </div>
         </div>`
-        stopMk.addListener('click', () => openInfoWindow(stopMk, content))
+        stopMk.addListener('gmp-click', () => openInfoWindow(stopMk, content))
         routeStopMarkers.push(stopMk)
       }
     }
@@ -396,7 +383,7 @@ async function runDraw(routeId: string, directionId: string, lineColor: string) 
     if (routePolylines.length > 0 || routeStopMarkers.length > 0) {
       const bounds = new google.maps.LatLngBounds()
       routePolylines.forEach((p) => p.getPath().forEach((pt) => bounds.extend(pt)))
-      routeStopMarkers.forEach((m) => { const pos = m.getPosition(); if (pos) bounds.extend(pos) })
+      routeStopMarkers.forEach((m) => { const pos = m.position; if (pos) bounds.extend(pos as google.maps.LatLng) })
       if (!bounds.isEmpty()) map.value!.fitBounds(bounds, 30)
     }
   } catch (e) {
@@ -419,35 +406,27 @@ watch(
   }
 )
 
-// ── Changement de thème ────────────────────────────────────────────────────
+// ── Création / recréation de la carte ─────────────────────────────────────
 
-// Changement de thème : on recharge les styles + les popups Vélib
-watch(theme, (t) => {
-  map.value?.setOptions({ styles: t === 'dark' ? DARK_STYLES : [] })
-  void loadVelibStations()
-  if (props.selectedStopName) showStopOnMap(props.selectedStopName)
-})
-
-// ── Cycle de vie ───────────────────────────────────────────────────────────
-
-onMounted(async () => {
-  setOptions({
-    key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
-    v: 'weekly'
-  })
-
-  await Promise.all([
-    importLibrary('maps'),
-    importLibrary('core'),
-    importLibrary('marker')
-  ])
-
+function initMap() {
   if (!mapContainer.value) return
 
+  const prevCenter = map.value?.getCenter() ?? { lat: 48.6921, lng: 6.1844 }
+  const prevZoom   = map.value?.getZoom()   ?? 13
+
+  // Détacher tous les marqueurs et polylignes avant de détruire la carte
+  clearRouteLayers()
+  velibMarkers.value.forEach(m => { m.map = null })
+  velibMarkers.value = []
+  velibCount.value = 0
+  if (stopMarker.value) { stopMarker.value.map = null; stopMarker.value = null }
+  if (activeInfoWindow) { activeInfoWindow.close(); activeInfoWindow = null }
+
   map.value = new google.maps.Map(mapContainer.value, {
-    center: { lat: 48.6921, lng: 6.1844 },
-    zoom: 13,
-    styles: theme.value === 'dark' ? DARK_STYLES : [],
+    center: prevCenter,
+    zoom: prevZoom,
+    mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string || 'DEMO_MAP_ID',
+    colorScheme: theme.value === 'dark' ? 'DARK' : 'LIGHT',
     mapTypeControl: false,
     streetViewControl: false,
     fullscreenControl: false
@@ -455,6 +434,21 @@ onMounted(async () => {
 
   void loadTravaux()
   void loadVelibStations()
+  if (props.selectedStopName) showStopOnMap(props.selectedStopName)
+  if (props.selectedRouteId) {
+    void runDraw(props.selectedRouteId, props.selectedDirectionId ?? '', props.selectedRouteColor ?? '#2563eb')
+  }
+}
+
+// ── Changement de thème ────────────────────────────────────────────────────
+
+watch(theme, () => { initMap() })
+
+// ── Cycle de vie ───────────────────────────────────────────────────────────
+
+onMounted(async () => {
+  await loadGoogleMapsApi()
+  initMap()
   // Actualisation automatique des Vélib toutes les 60 s
   velibRefreshTimer = globalThis.setInterval(() => void loadVelibStations(), 60_000)
 })
