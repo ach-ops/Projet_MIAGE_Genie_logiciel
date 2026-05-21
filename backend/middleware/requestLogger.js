@@ -9,6 +9,7 @@ export function requestLogger(req, res, next) {
 
   res.on('finish', () => {
     const duration = Date.now() - start;
+    // 5xx → error, 4xx → warn, reste → info
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
     logger[level](
       `${req.method} ${req.originalUrl} → ${res.statusCode} (${duration}ms)`,

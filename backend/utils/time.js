@@ -5,7 +5,7 @@
  * lendemain (ex : 25:30:00 = 01:30 le lendemain). Ces heures ne sont PAS invalides.
  */
 
-const DEFAULT_TIME_ZONE = process.env.APP_TIMEZONE || process.env.TZ || 'Europe/Paris';
+const DEFAULT_TIME_ZONE = process.env.TZ || 'Europe/Paris';
 
 function extractParts(date, timeZone) {
   const dtf = new Intl.DateTimeFormat('en-CA', {
@@ -42,9 +42,11 @@ function getTimeZoneOffsetMs(date, timeZone) {
 }
 
 function zonedDateTimeToTimestamp({ year, month, day, hour = 0, minute = 0, second = 0 }, timeZone) {
+  // Première passe : on suppose que l'offset UTC actuel est correct
   const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second);
   const offset1 = getTimeZoneOffsetMs(new Date(utcGuess), timeZone);
   const ts1 = utcGuess - offset1;
+  // Deuxième passe pour corriger les changements d'heure (heure d'été/hiver)
   const offset2 = getTimeZoneOffsetMs(new Date(ts1), timeZone);
   return offset1 === offset2 ? ts1 : utcGuess - offset2;
 }
@@ -115,7 +117,7 @@ export function longToNumber(value) {
     return value.toNumber();
   }
   if (typeof value === 'object' && 'low' in value && 'high' in value) {
-    // Calcul manuel si .toNumber() absent
+    // Calcul manuel si .toNumber() absent : 4294967296 = 2^32 (décalage du mot de poids fort)
     return value.low + value.high * 4294967296;
   }
   return Number(value);

@@ -6,6 +6,7 @@ export function useDelayFormat() {
     if (min === 0) return "À l'heure"
     const abs = Math.abs(min)
     const m = Math.floor(abs)
+    // Le retard peut être en minutes décimales (ex: 1.5) → on extrait les secondes
     const s = Math.round((abs - m) * 60)
     const parts = m > 0 ? `${m}min` : ''
     const secPart = s > 0 ? `${s}s` : ''
@@ -14,6 +15,7 @@ export function useDelayFormat() {
     return `+${formatted} de retard`
   }
 
+  // Seuils : 0 min → vert, 1–3 min → orange, +3 min → rouge
   function delayColor(min: number): { light: string; dark: string } {
     if (min <= 0) return { light: '#16a34a', dark: '#4ade80' }
     if (min <= 3) return { light: '#d97706', dark: '#fbbf24' }

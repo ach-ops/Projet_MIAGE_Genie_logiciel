@@ -249,8 +249,8 @@ describe('suggestAddresses', () => {
     axios.get.mockResolvedValue({
       data: {
         features: [
-          { geometry: { coordinates: [6.18, 48.69] }, properties: { label: 'Rue A, Nancy' } },
-          { geometry: { coordinates: [6.19, 48.70] }, properties: { label: 'Rue B, Nancy' } },
+          { geometry: { coordinates: [6.18, 48.69] }, properties: { label: 'Rue A, Nancy', postcode: '54000' } },
+          { geometry: { coordinates: [6.19, 48.70] }, properties: { label: 'Rue B, Nancy', postcode: '54100' } },
         ],
       },
     });

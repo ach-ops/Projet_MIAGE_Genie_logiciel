@@ -19,12 +19,15 @@ export async function connectDB() {
   const db = client.db(config.mongoDb);
   collection = db.collection('delays');
 
+  // Index unique sur (routeId, terminal) : un seul document par ligne+terminus dans la collection
   await collection.createIndex({ routeId: 1, terminal: 1 }, { unique: true });
+  // Index simple sur routeId pour accélérer les aggregations par ligne
   await collection.createIndex({ routeId: 1 });
 
   let safeUri;
   try {
     const u = new URL(config.mongoUri ?? '');
+    // On masque le mot de passe dans les logs pour ne pas l'exposer en clair
     if (u.password) u.password = '****';
     safeUri = u.toString();
   } catch {
@@ -81,7 +84,7 @@ export async function getDelayStats() {
   const since = new Date(Date.now() - STATS_WINDOW_MS);
 
   const lines = await collection.aggregate([
-    { $unwind: '$delays' },
+    { $unwind: '$delays' }, // déroule le tableau delays : un document par mesure individuelle
     {
       $match: {
         'delays.delay': { $ne: null },
@@ -106,6 +109,7 @@ export async function getDelayStats() {
   ]).toArray();
 
   const totalSamples = lines.reduce((sum, l) => sum + l.samples, 0);
+  // Moyenne pondérée par nombre de mesures — une ligne avec plus d'échantillons a plus de poids dans la moyenne globale
   const globalAverage = totalSamples > 0
     ? Math.round(lines.reduce((sum, l) => sum + l.avgDelay * l.samples, 0) / totalSamples * 10) / 10
     : 0;
@@ -121,6 +125,7 @@ export async function getDelaysByRoute() {
   if (!collection) return [];
 
   return collection.aggregate([
+    // $last : on prend uniquement la mesure la plus récente dans le tableau (ordre d'insertion)
     { $addFields: { lastDelay: { $last: '$delays' } } },
     { $match:     { 'lastDelay.delay': { $ne: null } } },
     {

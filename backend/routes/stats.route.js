@@ -15,6 +15,7 @@ const router = Router();
 router.get('/delays', asyncHandler(async (_req, res) => {
   const { lines, globalAverage } = await getDelayStats();
 
+  // On ajoute le nom lisible et la couleur de chaque ligne depuis les données GTFS statiques
   const enrichedLines = lines
     .map(l => {
       const info = getRouteInfo(l.routeId);

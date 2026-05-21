@@ -12,7 +12,7 @@ export const config = {
   port: parseInt(process.env.PORT, 10),
 
   // Fuseau horaire utilisé pour convertir les heures GTFS
-  timeZone: process.env.APP_TIMEZONE || process.env.TZ,
+  timeZone: process.env.TZ,
 
   // Connexion MongoDB
   mongoUri: process.env.MONGO_URI,

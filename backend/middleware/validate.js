@@ -1,3 +1,4 @@
+// Seuls ces caractères sont attendus dans les IDs GTFS (pas d'injection SQL)
 const GTFS_ID_RE = /^[A-Za-z0-9_\-.:]+$/;
 
 // Valide et retourne un identifiant GTFS (stopId, routeId, directionId…), null si invalide.
@@ -16,6 +17,7 @@ export function validateGtfsParams(...paramNames) {
       if (!clean) {
         return res.status(400).json({ error: `Paramètre invalide : "${name}".` });
       }
+      // On réécrit le param avec la valeur nettoyée (trim) pour les services en aval
       req.params[name] = clean;
     }
     next();
