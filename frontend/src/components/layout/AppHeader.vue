@@ -78,7 +78,7 @@ const tabs: Array<{ name: HeaderTab; label: string; icon: unknown }> = [
       </div>
     </div>
 
-    <!-- Badge retard moyen réseau -->
+    <!-- Badge retard moyen réseau — masqué tant qu'aucune donnée n'est disponible -->
     <div
       v-if="props.averageDelay !== null"
       class="flex items-center gap-2 mx-3 mb-2 px-3 py-2 rounded-xl"

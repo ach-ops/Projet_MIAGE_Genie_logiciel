@@ -48,7 +48,8 @@ export async function getAllArrivals(stopId, routeId, directionId) {
     theoretical,
     realtimeStatus,
     realtimeError,
-    useTheoretical: realtimeStatus !== 'ok' || realtime.length === 0, // indique au front d'afficher les horaires théoriques
+    // true si le frontend doit se rabattre sur les horaires théoriques pour l'affichage
+    useTheoretical: realtimeStatus !== 'ok' || realtime.length === 0,
   };
 }
 
@@ -72,6 +73,7 @@ export async function getArrivalsRealtime(stopId, routeId, directionId) {
       source: 'realtime',
     };
   } catch (err) {
+    // Flux RT hors service → les horaires théoriques évitent une page blanche
     logger.warn('Temps réel échoué, fallback théorique', { stopId, routeId, error: err.message });
     const theoretical = getTheoreticalArrivals(stopId, routeId, directionId);
     return {

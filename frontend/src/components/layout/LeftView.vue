@@ -60,6 +60,7 @@ async function fetchAverageDelay() {
 let arrivalsTimer: ReturnType<typeof setInterval> | null = null
 let delayTimer: ReturnType<typeof setInterval> | null = null
 
+// Rafraîchit les retards dès que l'onglet redevient actif
 function onPageVisible() {
   if (document.visibilityState === 'visible') fetchAverageDelay()
 }
@@ -89,7 +90,7 @@ function onTabChange(tab: HeaderTab) {
     // Effacer la sélection arrêt : le composable remet routes/directions à zéro
     selectedStopName.value = ''
   } else {
-    // Retour sur Horaires : resynchroniser la carte avec la sélection courante
+    // Retour sur Horaires : on resynchronise la carte avec ce qui était sélectionné avant
     emit('update:selectedRouteId', selectedRoute.value)
     emit('update:selectedDirectionId', selectedDirection.value
       ? (selectedDirection.value.split('|')[1] ?? '')

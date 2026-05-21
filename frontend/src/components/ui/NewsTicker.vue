@@ -29,6 +29,7 @@ function getMessages() {
   const list: { text: string; color?: { light: string; dark: string } }[] = [
     { text: 'Bienvenue sur le site de STAN' }
   ]
+  // Les trams (T1, T2…) passent en premier dans le bandeau
   const tram = routeDelays.value.filter((r) => r.routeName.toUpperCase().startsWith('T'))
   const others = routeDelays.value.filter((r) => !r.routeName.toUpperCase().startsWith('T'))
   for (const r of [...tram, ...others]) {
@@ -44,7 +45,7 @@ function getMessages() {
 
 const trackRef = ref<HTMLElement | null>(null)
 const hovered = ref(false)
-const SPEED_PPS = 55
+const SPEED_PPS = 55 // pixels par seconde (vitesse de défilement)
 let raf: number | null = null
 let pos = 0
 let lastTs = 0
@@ -104,6 +105,7 @@ onUnmounted(() => {
         ref="trackRef"
         class="inline-flex items-center whitespace-nowrap will-change-transform select-none pl-2"
       >
+        <!-- Le contenu est dupliqué 3 fois pour un défilement sans saut visible -->
         <template v-for="_ in 3" :key="_">
           <span
             v-for="(msg, i) in getMessages()"

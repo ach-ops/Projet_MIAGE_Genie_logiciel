@@ -49,6 +49,7 @@ onMounted(async () => {
 })
 
 watch(selectedRoute, async (routeId) => {
+  // Réinitialise la direction et notifie la carte immédiatement pour changer la couleur du tracé
   selectedDirection.value = ''
   directions.value = []
   emit('update:selectedRouteId', routeId)
@@ -76,6 +77,7 @@ function selectDirection(directionId: string) {
   selectedDirection.value = directionId
 }
 
+// Efface la sélection et demande à la carte de masquer le tracé
 function resetSelection() {
   selectedRoute.value = ''
   selectedDirection.value = ''

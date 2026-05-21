@@ -31,6 +31,7 @@ function openDropdown() {
 function closeDropdown(event: FocusEvent) {
   const container = event.currentTarget as HTMLElement | null
   const next = event.relatedTarget as Node | null
+  // On ne ferme pas si le focus reste dans le composant
   if (container && next && container.contains(next)) return
   isOpen.value = false
 }
@@ -48,6 +49,7 @@ function clearStop() {
   emit('update:selectedStop', '')
 }
 
+// Si l'utilisateur valide à la main un nom qui correspond exactement à un arrêt connu
 function commitTypedStop() {
   const typed = searchText.value.trim()
   if (!typed) {

@@ -103,6 +103,7 @@ function markerIcon(url: string, size = 32): google.maps.Icon {
   }
 }
 
+// Choisit l'icône d'incident en fonction de mots-clés dans la description
 function getTravauxIconUrl(desc: string): string {
   const text = desc.toLowerCase()
   if (text.includes('eau')) return icons.eau
@@ -136,6 +137,7 @@ async function loadVelibStations() {
       const docks = Number(station.docksAvailable ?? 0)
       const total = bikes + docks
       const bikePercent = total > 0 ? Math.round((bikes / total) * 100) : 0
+      // Couleur selon disponibilité : rouge si vide, orange si ≤ 2, vert/bleu sinon
       const bikeColor = bikes === 0 ? '#ef4444' : bikes <= 2 ? '#f59e0b' : '#00b7cc'
       const dockColor = docks === 0 ? '#ef4444' : docks <= 2 ? '#f59e0b' : '#10b981'
       const isDark = theme.value === 'dark'
@@ -300,6 +302,7 @@ function clearRouteLayers() {
   routeStopMarkers = []
 }
 
+// Compteur de génération : permet d'abandonner un dessin si une nouvelle sélection arrive pendant un fetch
 let drawGeneration = 0
 let activeAbort: AbortController | null = null
 let drawTimer: ReturnType<typeof setTimeout> | null = null
@@ -332,6 +335,7 @@ async function runDraw(routeId: string, directionId: string, lineColor: string) 
     const points: [number, number][] = shapeData.points || []
     const stops: { lat: number; lon: number; stopName: string }[] = stopsData.stops || []
     const validStops = stops.filter((s) => !Number.isNaN(s.lat) && !Number.isNaN(s.lon))
+    // Si pas de shape GPS, on relie les arrêts entre eux à la place
     const linePoints = points.length > 0 ? points : validStops.map((s): [number, number] => [s.lat, s.lon])
 
     if (linePoints.length > 1) {
@@ -407,6 +411,7 @@ watch(
     if (drawTimer !== null) { clearTimeout(drawTimer); drawTimer = null }
     activeAbort?.abort()
 
+    // Debounce 150 ms pour éviter de lancer un fetch à chaque keystroke lors d'une sélection rapide
     drawTimer = setTimeout(() => {
       drawTimer = null
       void runDraw(routeId as string, directionId as string, (color as string) || '#2563eb')
@@ -416,6 +421,7 @@ watch(
 
 // ── Changement de thème ────────────────────────────────────────────────────
 
+// Changement de thème : on recharge les styles + les popups Vélib
 watch(theme, (t) => {
   map.value?.setOptions({ styles: t === 'dark' ? DARK_STYLES : [] })
   void loadVelibStations()
@@ -449,6 +455,7 @@ onMounted(async () => {
 
   void loadTravaux()
   void loadVelibStations()
+  // Actualisation automatique des Vélib toutes les 60 s
   velibRefreshTimer = globalThis.setInterval(() => void loadVelibStations(), 60_000)
 })
 
