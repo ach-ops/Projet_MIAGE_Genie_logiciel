@@ -129,6 +129,7 @@ async function fetchVelibStationsFromGbfs() {
   let infoData, statusData;
 
   try {
+    // Téléchargement parallèle des deux flux pour réduire le temps d'attente
     [infoData, statusData] = await Promise.all([
       fetchJson(stationInformationUrl),
       fetchJson(stationStatusUrl),
@@ -138,6 +139,7 @@ async function fetchVelibStationsFromGbfs() {
       stationInformationUrl === NANCY_STATION_INFORMATION_URL &&
       stationStatusUrl      === NANCY_STATION_STATUS_URL;
 
+    // On évite une boucle infinie si on est déjà sur les URLs de secours
     if (alreadyUsingDirectUrls) throw error;
 
     logger.warn('Feeds GBFS resolus en echec, retry sur URLs Nancy directes', { message: error?.message });

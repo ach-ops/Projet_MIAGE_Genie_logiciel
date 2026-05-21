@@ -113,6 +113,7 @@ export async function loadGTFS(dir = GTFS_DIR) {
     stopTimesByTrip.get(tripId).push(row);
   }, dir);
 
+  // stop_times.txt n'est pas nécessairement trié — on trie par numéro d'ordre dans chaque trajet
   for (const [, sts] of stopTimesByTrip) {
     sts.sort((a, b) => Number(a.stop_sequence) - Number(b.stop_sequence));
   }
@@ -150,6 +151,7 @@ export async function loadGTFS(dir = GTFS_DIR) {
     });
   }, dir);
 
+  // shapes.txt peut avoir les points dans n'importe quel ordre — on trie par séquence
   for (const [, pts] of shapes) {
     pts.sort((a, b) => a.seq - b.seq);
   }
@@ -175,15 +177,18 @@ export function getActiveServiceIds(date = new Date()) {
   const weekdayCol = getWeekdayColumn(date, config.timeZone);
   const active = new Set();
 
+  // Parcourt le calendrier régulier : service actif si aujourd'hui est dans la plage et le bon jour
   for (const [serviceId, row] of calendar) {
     if (row.start_date <= todayStr && row.end_date >= todayStr && row[weekdayCol] === '1') {
       active.add(serviceId);
     }
   }
 
+  // Applique les exceptions ponctuelles par-dessus le calendrier régulier
   for (const [serviceId, exceptions] of calendarDates) {
     for (const ex of exceptions) {
       if (ex.date === todayStr) {
+        // exception_type 1 = service ajouté ce jour-là, 2 = service supprimé (jour férié, grève…)
         if (ex.exception_type === '1') active.add(serviceId);
         else if (ex.exception_type === '2') active.delete(serviceId);
       }
@@ -211,16 +216,18 @@ export function getTheoreticalArrivals(stopId, routeId, directionId, date = new 
   const results = [];
   const debugFiltered = { noTrip: 0, wrongRoute: 0, wrongDir: 0, inactiveService: 0, badTime: 0, past: 0 };
 
+  // Parcourt tous les passages de cet arrêt et ne garde que ceux qui correspondent
+  // à la bonne ligne, la bonne direction, un service actif aujourd'hui
   for (const st of stopTimes) {
     const trip = trips.get(st.trip_id?.trim());
-    if (!trip) { debugFiltered.noTrip++; continue; }
-    if (trip.route_id !== routeId) { debugFiltered.wrongRoute++; continue; }
-    if (String(trip.direction_id) !== String(directionId)) { debugFiltered.wrongDir++; continue; }
-    if (!activeServices.has(trip.service_id)) { debugFiltered.inactiveService++; continue; }
+    if (!trip) { debugFiltered.noTrip++; continue; }                                       // trajet inconnu (données GTFS incohérentes)
+    if (trip.route_id !== routeId) { debugFiltered.wrongRoute++; continue; }               // autre ligne
+    if (String(trip.direction_id) !== String(directionId)) { debugFiltered.wrongDir++; continue; } // autre sens
+    if (!activeServices.has(trip.service_id)) { debugFiltered.inactiveService++; continue; } // ne circule pas aujourd'hui
 
     const ts = gtfsTimeToTimestamp(st.arrival_time || st.departure_time, date, config.timeZone);
-    if (ts === null) { debugFiltered.badTime++; continue; }
-    if (ts < now) { debugFiltered.past++; continue; }
+    if (ts === null) { debugFiltered.badTime++; continue; }  // heure GTFS mal formée
+    if (ts < now) { debugFiltered.past++; continue; }        // passage déjà passé
 
     results.push({
       stopId,
@@ -249,6 +256,7 @@ export function hasUpcomingDeparture(stopId, routeId, directionId, date = new Da
   const activeServices = getActiveServiceIds(date);
   const stopTimes = stopTimesByStop.get(stopId) || [];
 
+  // On s'arrête dès qu'on trouve un seul passage futur valide — pas besoin d'explorer tout
   for (const st of stopTimes) {
     const trip = trips.get(st.trip_id?.trim());
     if (!trip) continue;
@@ -260,7 +268,7 @@ export function hasUpcomingDeparture(stopId, routeId, directionId, date = new Da
     if (ts === null) continue;
     if (ts < now) continue;
 
-    return true;
+    return true;  // au moins un départ futur trouvé
   }
   return false;
 }
@@ -273,8 +281,9 @@ export function getNextDepartureMins(stopId, routeId, directionId, date = new Da
   const now = date.getTime();
   const activeServices = getActiveServiceIds(date);
   const stopTimes = stopTimesByStop.get(stopId) || [];
-  let minFutureTs = null;
+  let minFutureTs = null; // timestamp du prochain départ futur
 
+  // Parcourt tous les passages pour trouver le plus proche
   for (const st of stopTimes) {
     const trip = trips.get(st.trip_id?.trim());
     if (!trip) continue;
@@ -284,6 +293,7 @@ export function getNextDepartureMins(stopId, routeId, directionId, date = new Da
 
     const ts = gtfsTimeToTimestamp(st.departure_time || st.arrival_time, date, config.timeZone);
     if (ts === null || ts < now) continue;
+    // Garde le timestamp le plus petit (= le plus proche dans le temps)
     if (minFutureTs === null || ts < minFutureTs) minFutureTs = ts;
   }
 
@@ -323,9 +333,10 @@ export function getRouteInfo(routeId) {
 export function getRoutesByStop(stopId) {
   const stopTimes = stopTimesByStop.get(stopId?.trim()) || [];
   const activeServices = getActiveServiceIds();
-  const activeRouteSet = new Set();
-  const allRouteSet = new Set();
+  const activeRouteSet = new Set(); // lignes qui circulent aujourd'hui
+  const allRouteSet = new Set();    // toutes les lignes connues (pour le fallback)
 
+  // Pour chaque passage à cet arrêt, on collecte la ligne du trajet correspondant
   for (const st of stopTimes) {
     const trip = trips.get(st.trip_id?.trim());
     if (!trip) continue;
@@ -335,6 +346,7 @@ export function getRoutesByStop(stopId) {
     if (activeServices.has(trip.service_id?.trim())) activeRouteSet.add(rid);
   }
 
+  // Si aucun service n'est actif aujourd'hui, on retourne toutes les lignes connues (fallback)
   const routeSet = activeRouteSet.size > 0 ? activeRouteSet : allRouteSet;
   return Array.from(routeSet)
     .map((id) => routes.get(id))
@@ -344,16 +356,17 @@ export function getRoutesByStop(stopId) {
 export function getDirections(stopId, routeId) {
   const stopTimes = stopTimesByStop.get(stopId?.trim()) || [];
   const activeServices = getActiveServiceIds();
-  const dirs = new Map();
-  const fallbackDirs = new Map();
+  const dirs = new Map();         // directions actives aujourd'hui (directionId → headsign)
+  const fallbackDirs = new Map(); // toutes les directions connues, même hors service
 
+  // Parcourt les passages pour collecter les directions disponibles à cet arrêt pour cette ligne
   for (const st of stopTimes) {
     const trip = trips.get(st.trip_id?.trim());
     if (!trip) continue;
     if (trip.route_id !== routeId) continue;
-    fallbackDirs.set(trip.direction_id, trip.trip_headsign);
+    fallbackDirs.set(trip.direction_id, trip.trip_headsign); // toujours mémorisé comme fallback
     if (!activeServices.has(trip.service_id)) continue;
-    dirs.set(trip.direction_id, trip.trip_headsign);
+    dirs.set(trip.direction_id, trip.trip_headsign);         // uniquement si service actif
   }
 
   const result = dirs.size > 0 ? dirs : fallbackDirs;
@@ -362,22 +375,24 @@ export function getDirections(stopId, routeId) {
 
 export function getDirectionsForRoute(routeId) {
   const activeServices = getActiveServiceIds();
-  const dirs = new Map();
-  const fallbackDirs = new Map();
+  const dirs = new Map();         // directions actives aujourd'hui
+  const fallbackDirs = new Map(); // toutes les directions connues pour cette ligne
 
+  // Parcourt tous les trajets de la ligne pour recenser les directions disponibles
   for (const trip of (tripsByRoute.get(routeId?.trim()) || [])) {
-    fallbackDirs.set(trip.direction_id, trip.trip_headsign);
+    fallbackDirs.set(trip.direction_id, trip.trip_headsign); // fallback systématique
     if (!activeServices.has(trip.service_id?.trim())) continue;
-    dirs.set(trip.direction_id, trip.trip_headsign);
+    dirs.set(trip.direction_id, trip.trip_headsign);         // actif aujourd'hui
   }
 
-  // Si aucun service actif aujourd'hui, on retourne toutes les directions disponibles
+  // En dehors des heures de service, on retourne les directions du calendrier complet
   const result = dirs.size > 0 ? dirs : fallbackDirs;
   return Array.from(result.entries()).map(([id, label]) => ({ directionId: id, label }));
 }
 
 export function getDirectionName(stopId, routeId, directionId) {
   const stopTimes = stopTimesByStop.get(stopId) || [];
+  // Cherche le premier trajet correspondant et retourne son headsign (ex : "Laxou Provinces")
   for (const st of stopTimes) {
     const trip = trips.get(st.trip_id?.trim());
     if (!trip) continue;
@@ -388,11 +403,12 @@ export function getDirectionName(stopId, routeId, directionId) {
 }
 
 export function getRouteShape(routeId, directionId) {
+  // Parcourt les trajets de la ligne jusqu'à trouver un qui a un tracé GPS défini
   for (const trip of (tripsByRoute.get(routeId?.trim()) || [])) {
     if (String(trip.direction_id) !== String(directionId)) continue;
-    if (!trip.shape_id) continue;
+    if (!trip.shape_id) continue; // ce trajet n'a pas de tracé
     const pts = shapes.get(trip.shape_id);
-    if (pts?.length > 0) return pts.map((p) => [p.lat, p.lon]);
+    if (pts?.length > 0) return pts.map((p) => [p.lat, p.lon]); // retourne le premier tracé valide
   }
   return [];
 }
@@ -400,35 +416,40 @@ export function getRouteShape(routeId, directionId) {
 export function getRouteStops(routeId, directionId) {
   // On prend le trajet avec le plus d'arrêts parmi les services actifs pour avoir le parcours complet
   const activeServices = getActiveServiceIds();
-  let bestTripId   = null;
+  let bestTripId    = null;
   let bestStopCount = -1;
   let fallbackTripId = null;
   let fallbackCount  = -1;
 
+  // Parcourt tous les trajets de la ligne pour trouver le "meilleur" trajet représentatif
   for (const trip of (tripsByRoute.get(routeId?.trim()) || [])) {
     const tripId = trip.trip_id?.trim();
-    if (String(trip.direction_id) !== String(directionId)) continue;
+    if (String(trip.direction_id) !== String(directionId)) continue; // mauvais sens
 
     const count = (stopTimesByTrip.get(tripId) || []).length;
 
     if (activeServices.has(trip.service_id?.trim())) {
+      // Trajet actif aujourd'hui -> candidat prioritaire, on garde celui avec le plus d'arrêts
       if (count > bestStopCount) { bestStopCount = count; bestTripId = tripId; }
     } else if (count > fallbackCount) {
+      // Trajet inactif -> gardé en secours au cas où aucun trajet actif n'existe
       fallbackCount = count;
       fallbackTripId = tripId;
     }
   }
 
+  // Si aucun trajet actif, on utilise le fallback (évite un retour vide en dehors des heures de service)
   const referenceTripId = bestTripId ?? fallbackTripId;
   if (!referenceTripId) return [];
 
   const sts = stopTimesByTrip.get(referenceTripId) || [];
 
+  // Convertit chaque passage en objet enrichi avec les coordonnées GPS de l'arrêt
   return sts
     .map((st) => {
       const sid  = st.stop_id?.trim();
       const stop = stops.get(sid);
-      if (!stop) return null;
+      if (!stop) return null; // arrêt référencé dans stop_times mais absent de stops.txt
       return {
         stopId:   sid,
         stopName: stop.stop_name,
@@ -471,17 +492,18 @@ export function getStopTimesForTrip(tripId) {
 
 export function getAllTerminals() {
   const terminals = [];
+  // `seen` évite de traiter plusieurs fois la même combinaison ligne+direction
   const seen = new Set();
 
   for (const [, trip] of trips) {
     const key = `${trip.route_id}-${trip.direction_id}`;
-    if (seen.has(key)) continue;
+    if (seen.has(key)) continue; // déjà traité pour cette ligne+direction
     seen.add(key);
 
     const sts = stopTimesByTrip.get(trip.trip_id?.trim());
     if (!sts?.length) continue;
 
-    const lastSt = sts[sts.length - 1]; // déjà trié par ordre : le dernier est le terminus
+    const lastSt = sts[sts.length - 1]; // déjà trié par ordre : le dernier arrêt = terminus
 
     terminals.push({
       stopId: lastSt.stop_id,
@@ -508,12 +530,14 @@ export function debugStop(stopId) {
   const now = new Date();
   const todayStr = formatDateYYYYMMDD(now, config.timeZone);
 
+  // Agrège les passages par combinaison (ligne + direction) pour le rapport de diagnostic
   const routeMap = new Map();
 
   for (const st of stopTimes) {
     const trip = trips.get(st.trip_id?.trim());
     if (!trip) continue;
 
+    // Clé unique pour regrouper tous les passages d'une même ligne dans un même sens
     const rk = `${trip.route_id}|${trip.direction_id}`;
     if (!routeMap.has(rk)) {
       routeMap.set(rk, {
@@ -522,12 +546,13 @@ export function debugStop(stopId) {
         headsign: trip.trip_headsign,
         serviceActive: activeServices.has(trip.service_id),
         passageCount: 0,
-        nextPassage: null,
+        nextPassage: null, // timestamp du prochain passage futur
       });
     }
     const entry = routeMap.get(rk);
     entry.passageCount++;
 
+    // Met à jour le prochain passage si ce passage est dans le futur et plus proche
     const ts = gtfsTimeToTimestamp(st.arrival_time, now, config.timeZone);
     if (ts !== null && ts > now.getTime()) {
       if (!entry.nextPassage || ts < entry.nextPassage) entry.nextPassage = ts;

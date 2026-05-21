@@ -30,6 +30,7 @@ export function useAddressAutocomplete() {
 
     if (!value || value.length < 3) return
 
+    // Debounce à 320 ms pour éviter un appel API à chaque frappe
     timer = setTimeout(async () => {
       loading.value = true
       try {

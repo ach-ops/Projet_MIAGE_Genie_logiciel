@@ -7,6 +7,7 @@ const STORAGE_KEY = 'stan-theme'
 function getInitialTheme(): Theme {
   const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
   if (stored === 'dark' || stored === 'light') return stored
+  // Aucune préférence stockée → on suit le thème système de l'OS
   if (typeof globalThis.matchMedia !== 'function') return 'light'
   return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }

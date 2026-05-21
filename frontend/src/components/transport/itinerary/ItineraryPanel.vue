@@ -31,6 +31,7 @@ function clearFrom() { store.fromAddress = ''; fromAc.clear(); fromRef.value?.fo
 function clearTo()   { store.toAddress   = ''; toAc.clear();   toRef.value?.focus()   }
 
 function onFromKeydown(e: KeyboardEvent) {
+  // Entrée dans le champ départ : passer au champ arrivée si vide, sinon lancer la recherche directement
   if (e.key === 'Enter')  { fromAc.clear(); if (store.toAddress) { store.search() } else { toRef.value?.focus() } }
   if (e.key === 'Escape') fromAc.clear()
 }

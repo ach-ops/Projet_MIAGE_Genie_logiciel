@@ -13,6 +13,7 @@ defineProps<{
 
 const emit = defineEmits<{ refresh: [] }>()
 
+// Préfère le temps réel ; repli sur le théorique si le flux RT ne couvre pas ce passage
 function displayMin(a: MergedArrival): number | null {
   return a.realtimeMin ?? a.theoreticalMin
 }
@@ -30,6 +31,7 @@ function delayLabel(delay: number | null): string {
   return `${delay > 0 ? '+' : ''}${delay} min`
 }
 
+// Couleur du texte : vert si à l'heure/avance, orange ≤ 2 min, rouge au-delà
 function delayClass(delay: number | null): string {
   if (delay === null) return 'text-slate-300 dark:text-slate-600'
   if (delay <= 0) return 'text-emerald-600 dark:text-emerald-400'

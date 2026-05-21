@@ -59,12 +59,13 @@ export type Arrival = {
   arrivalInMin: number
 }
 
+// Résultat de la fusion temps réel + théorique dans useTransportData
 export type MergedArrival = {
   tripId: string
   realtimeMin: number | null
   theoreticalMin: number | null
   theoreticalTime: string | null
-  delay: number | null
+  delay: number | null // positif = retard, négatif = avance, null = pas de comparaison possible
 }
 
 // ─── Itinéraire ───────────────────────────────────────────────────────────────

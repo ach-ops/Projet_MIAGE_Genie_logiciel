@@ -7,6 +7,7 @@ import type { WalkLeg, BusLeg } from '@/types/types'
 
 const store     = useItineraryStore()
 const { theme } = useTheme()
+// La première option est dépliée par défaut
 const expandedIndex = ref<number | null>(0)
 
 function toggle(i: number) {
@@ -18,9 +19,11 @@ function isBus (leg: WalkLeg | BusLeg): leg is BusLeg  { return leg.type === 'bu
 function fmt(min: number) {
   if (min < 60) return `${min} min`
   const h = Math.floor(min / 60), m = min % 60
+  // On supprime les minutes quand elles sont nulles ("2 h" plutôt que "2 h 0 min")
   return m === 0 ? `${h} h` : `${h} h ${m} min`
 }
 function fmtDist(km: number) {
+  // Sous 1 km on affiche en mètres pour plus de lisibilité
   return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`
 }
 function badgeStyle(color: string) { return { background: color, color: '#fff' } }
