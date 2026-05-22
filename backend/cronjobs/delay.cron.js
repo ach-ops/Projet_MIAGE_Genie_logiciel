@@ -17,11 +17,11 @@ export function startCron() {
     }
   });
 
-  // ── Nettoyage des entrées > 3h, toutes les 3h ──────────────────────────────
+  // ── Nettoyage des entrées > 3h, toutes les Nuit ──────────────────────────────
   // Flag anti-chevauchement : si le nettoyage précédent tourne encore, on skip.
   let cleanupRunning = false;
 
-  cron.schedule('0 */3 * * *', async () => {
+  cron.schedule('0 2 * * *', async () => {
     if (cleanupRunning) {
       logger.warn('Nettoyage déjà en cours, skip.');
       return;
