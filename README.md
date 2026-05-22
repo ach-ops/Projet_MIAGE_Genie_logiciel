@@ -2,6 +2,8 @@
 
 Application web de suivi des transports en commun du réseau STAN (Nancy) : horaires théoriques, passages temps réel, itinéraires multimodaux et statistiques de retards.
 
+Projet réalisé par **Achraf RAOUF**, **Inès JUNG**, **Romain THURIOT**, **Claire FRITZ** et **Gwendy SAINT-ALARY**
+
 ---
 
 ## Prérequis
@@ -58,7 +60,7 @@ WEATHER_API_KEY=<votre-clé>
 # Origines autorisées par le CORS (laisser vide en dev, sinon séparer par des virgules)
 CORS_ORIGINS=
 
-# Paramètres optionnels (valeurs par défaut ci-dessous)
+# Paramètres optionnels (valeurs mise dans notre backend)
 CACHE_DURATION_MS=30000
 MAX_ARRIVALS=8
 AXIOS_TIMEOUT_MS=8000
